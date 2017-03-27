@@ -1,0 +1,289 @@
+// Microsoft Visual C++ generated resource script.
+//
+#include "resource.h"
+
+#define APSTUDIO_READONLY_SYMBOLS
+/////////////////////////////////////////////////////////////////////////////
+//
+// Generated from the TEXTINCLUDE 2 resource.
+//
+#include "afxres.h"
+
+/////////////////////////////////////////////////////////////////////////////
+#undef APSTUDIO_READONLY_SYMBOLS
+
+/////////////////////////////////////////////////////////////////////////////
+// English (United States) resources
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_ENU)
+LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
+#pragma code_page(1252)
+
+#ifdef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// TEXTINCLUDE
+//
+
+1 TEXTINCLUDE 
+BEGIN
+    "resource.h\0"
+END
+
+2 TEXTINCLUDE 
+BEGIN
+    "#include ""afxres.h""\r\n"
+    "\0"
+END
+
+3 TEXTINCLUDE 
+BEGIN
+    "\r\n"
+    "\0"
+END
+
+#endif    // APSTUDIO_INVOKED
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Menu
+//
+
+MENU_MAINFRAME MENU
+BEGIN
+    POPUP "&File"
+    BEGIN
+        MENUITEM SEPARATOR
+        MENUITEM "E&xit",                       IDC_EXIT
+    END
+    POPUP "Emulation"
+    BEGIN
+        MENUITEM "Preferences..",               ID_OPTIONS_PREFERENCES
+        MENUITEM SEPARATOR
+        MENUITEM "End",                         ID_EMULATION_END
+        POPUP "Reset"
+        BEGIN
+            MENUITEM "Soft",                        ID_RESET_SOFTRESET
+            MENUITEM "Hard",                        ID_RESET_HARDRESET
+        END
+        MENUITEM SEPARATOR
+        MENUITEM "Pause/Resume",                ID_OPTIONS_PAUSE
+        MENUITEM "Load State",                  ID_OPTIONS_LOADSTATE
+        MENUITEM "Save State",                  ID_OPTIONS_SAVESTATE
+    END
+    POPUP "&About"
+    BEGIN
+        MENUITEM "About",                       IDC_ABOUT
+    END
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Dialog
+//
+
+IDD_ABOUT DIALOGEX 0, 0, 273, 201
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION
+CAPTION "About WinMupen..."
+FONT 8, "MS Shell Dlg", 0, 0, 0x1
+BEGIN
+    DEFPUSHBUTTON   "OK",IDOK,108,180,50,14,WS_GROUP
+    LTEXT           "MuGBX",IDC_APPVER,90,78,95,9
+    LTEXT           "Static",IDC_BUILDDATE,90,90,109,9
+    LTEXT           "Visit my site for info and support",IDC_LINK,72,168,120,9
+    GROUPBOX        "Credits",IDC_STATIC,6,102,264,60
+    LTEXT           "Uses File_Extractor by blargg",IDC_FEXCRED,84,120,120,8
+    LTEXT           "Uses the Windows Template Library by MS",IDC_WTLCRED,84,144,168,12
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// DESIGNINFO
+//
+
+#ifdef APSTUDIO_INVOKED
+GUIDELINES DESIGNINFO
+BEGIN
+    IDD_ABOUT, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 266
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 194
+    END
+END
+#endif    // APSTUDIO_INVOKED
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// AFX_DIALOG_LAYOUT
+//
+
+IDD_ABOUT AFX_DIALOG_LAYOUT 
+BEGIN
+    0x0000
+END
+
+#endif    // English (United States) resources
+/////////////////////////////////////////////////////////////////////////////
+
+
+/////////////////////////////////////////////////////////////////////////////
+// English (Australia) resources
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_ENA)
+LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_AUS
+#pragma code_page(1252)
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Dialog
+//
+
+IDD_SETTINGS DIALOGEX 0, 0, 322, 213
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "libretro_player Settings"
+FONT 8, "MS Shell Dlg", 400, 0, 0x1
+BEGIN
+    DEFPUSHBUTTON   "OK",IDOK,216,192,50,14
+    PUSHBUTTON      "Cancel",IDCANCEL,270,192,50,14
+    CONTROL         "",IDC_TABCTRL,"SysTabControl32",0x0,3,6,315,180
+END
+
+IDD_PATHS DIALOGEX 0, 0, 284, 158
+STYLE DS_SETFONT | DS_FIXEDSYS | WS_CHILD | WS_SYSMENU
+FONT 8, "MS Shell Dlg", 400, 0, 0x1
+BEGIN
+    GROUPBOX        "Paths",IDC_STATIC,6,6,270,102
+    EDITTEXT        IDC_SSHOTS,60,18,174,12,ES_AUTOHSCROLL
+    LTEXT           "Screenshots",IDC_STATIC,12,18,42,12
+    PUSHBUTTON      ". . . ",IDC_SSHOTSDIR,240,18,30,12
+    LTEXT           "Saves/states",IDC_STATIC,12,36,42,12
+    EDITTEXT        IDC_SSTATES,60,36,174,12,ES_AUTOHSCROLL
+    PUSHBUTTON      ". . . ",IDC_SSTATESDIR,240,36,30,12
+    LTEXT           "Shared data",IDC_STATIC,12,54,42,12
+    EDITTEXT        IDC_SDATA,60,54,174,12,ES_AUTOHSCROLL
+    PUSHBUTTON      ". . . ",IDC_SDATADIR,240,54,30,12
+    LTEXT           "Plugins",IDC_STATIC,12,72,42,12
+    EDITTEXT        IDC_PLUGINS,60,72,174,12,ES_AUTOHSCROLL
+    PUSHBUTTON      ". . . ",IDC_PLUGINSDIR,240,72,30,12
+    LTEXT           "ROMs",IDC_STATIC,12,90,42,12
+    EDITTEXT        IDC_ROMS,60,90,174,12,ES_AUTOHSCROLL
+    PUSHBUTTON      ". . . ",IDC_ROMSDIR,240,90,30,12
+    LTEXT           "Video resolution:",IDC_STATIC,6,114,54,11
+    CONTROL         "Fullscreen",IDC_VIDFULLSCREEN,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,6,132,48,12
+    COMBOBOX        IDC_VIDRES,66,114,104,108,CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
+END
+
+IDD_GENERALSETTINGS DIALOGEX 0, 0, 284, 158
+STYLE DS_SETFONT | DS_FIXEDSYS | WS_CHILD | WS_SYSMENU
+FONT 8, "MS Shell Dlg", 400, 0, 0x1
+BEGIN
+END
+
+IDD_INPUT1 DIALOGEX 0, 0, 290, 119
+STYLE DS_SETFONT | DS_FIXEDSYS | WS_CHILD | WS_SYSMENU
+FONT 8, "MS Shell Dlg", 400, 0, 0x1
+BEGIN
+    LTEXT           "input is here",IDC_STATIC,60,30,90,12
+    GROUPBOX        "Assigned controls",IDC_STATIC,0,0,287,117
+    CONTROL         "",IDC_LIST_ASSIGN,"SysListView32",LVS_REPORT | LVS_SHOWSELALWAYS | LVS_ALIGNLEFT | WS_BORDER,6,12,276,66
+    EDITTEXT        IDC_EDIT_EVENT,6,99,276,12,ES_AUTOHSCROLL | ES_READONLY | ES_WANTRETURN
+    GROUPBOX        "Key or joystick event",IDC_STATIC,0,81,288,30
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// DESIGNINFO
+//
+
+#ifdef APSTUDIO_INVOKED
+GUIDELINES DESIGNINFO
+BEGIN
+    IDD_SETTINGS, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 315
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 206
+    END
+
+    IDD_PATHS, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 277
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 151
+    END
+
+    IDD_GENERALSETTINGS, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 277
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 151
+    END
+
+    IDD_INPUT1, DIALOG
+    BEGIN
+        RIGHTMARGIN, 286
+        BOTTOMMARGIN, 67
+    END
+END
+#endif    // APSTUDIO_INVOKED
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// AFX_DIALOG_LAYOUT
+//
+
+IDD_PATHS AFX_DIALOG_LAYOUT 
+BEGIN
+    0x0000
+END
+
+IDD_GENERALSETTINGS AFX_DIALOG_LAYOUT 
+BEGIN
+    0x0000
+END
+
+IDD_SETTINGS AFX_DIALOG_LAYOUT 
+BEGIN
+    0x0000
+END
+
+IDD_INPUT1 AFX_DIALOG_LAYOUT 
+BEGIN
+    0x0000
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Icon
+//
+
+// Icon with lowest ID value placed first to ensure application icon
+// remains consistent on all systems.
+IDI_ICON1               ICON                    "emu_wtl.ico"
+#endif    // English (Australia) resources
+/////////////////////////////////////////////////////////////////////////////
+
+
+
+#ifndef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// Generated from the TEXTINCLUDE 3 resource.
+//
+
+
+/////////////////////////////////////////////////////////////////////////////
+#endif    // not APSTUDIO_INVOKED
+
