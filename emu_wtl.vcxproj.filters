@@ -1,0 +1,153 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="CLibretro.cpp" />
+    <ClCompile Include="gui\emu_wtl.cpp" />
+    <ClCompile Include="stdafx.cpp" />
+    <ClCompile Include="io\abstract_file.cpp">
+      <Filter>blargg</Filter>
+    </ClCompile>
+    <ClCompile Include="io\bind_list.cpp">
+      <Filter>blargg</Filter>
+    </ClCompile>
+    <ClCompile Include="io\blargg_common.cpp">
+      <Filter>blargg</Filter>
+    </ClCompile>
+    <ClCompile Include="io\blargg_errors.cpp">
+      <Filter>blargg</Filter>
+    </ClCompile>
+    <ClCompile Include="io\dinput.cpp">
+      <Filter>io</Filter>
+    </ClCompile>
+    <ClCompile Include="io\gl.cpp">
+      <Filter>io</Filter>
+    </ClCompile>
+    <ClCompile Include="io\glad.c">
+      <Filter>io</Filter>
+    </ClCompile>
+    <ClCompile Include="io\glad_wgl.c">
+      <Filter>io</Filter>
+    </ClCompile>
+    <ClCompile Include="io\guid_container.cpp">
+      <Filter>io</Filter>
+    </ClCompile>
+    <ClCompile Include="io\input.cpp">
+      <Filter>io</Filter>
+    </ClCompile>
+    <ClCompile Include="io\Data_Reader.cpp">
+      <Filter>io</Filter>
+    </ClCompile>
+    <ClCompile Include="io\audio\minisdl_audio.c">
+      <Filter>io</Filter>
+    </ClCompile>
+    <ClCompile Include="io\audio\resample.c">
+      <Filter>io\resample</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="CLibretro.h" />
+    <ClInclude Include="gui\DropFileTarget.h" />
+    <ClInclude Include="gui\emu_wtl.h" />
+    <ClInclude Include="gui\MyWindow.h" />
+    <ClInclude Include="gui\Resource.h" />
+    <ClInclude Include="gui\utf8conv.h" />
+    <ClInclude Include="libretro.h" />
+    <ClInclude Include="stdafx.h" />
+    <ClInclude Include="targetver.h" />
+    <ClInclude Include="io\blargg_source.h">
+      <Filter>blargg</Filter>
+    </ClInclude>
+    <ClInclude Include="io\abstract_file.h">
+      <Filter>blargg</Filter>
+    </ClInclude>
+    <ClInclude Include="io\bind_list.h">
+      <Filter>blargg</Filter>
+    </ClInclude>
+    <ClInclude Include="io\blargg_common.h">
+      <Filter>blargg</Filter>
+    </ClInclude>
+    <ClInclude Include="io\blargg_config.h">
+      <Filter>blargg</Filter>
+    </ClInclude>
+    <ClInclude Include="io\blargg_endian.h">
+      <Filter>blargg</Filter>
+    </ClInclude>
+    <ClInclude Include="io\blargg_errors.h">
+      <Filter>blargg</Filter>
+    </ClInclude>
+    <ClInclude Include="io\dinput.h">
+      <Filter>io</Filter>
+    </ClInclude>
+    <ClInclude Include="io\gl_render.h">
+      <Filter>io</Filter>
+    </ClInclude>
+    <ClInclude Include="io\glad_wgl.h">
+      <Filter>io</Filter>
+    </ClInclude>
+    <ClInclude Include="io\guid_container.h">
+      <Filter>io</Filter>
+    </ClInclude>
+    <ClInclude Include="io\input.h">
+      <Filter>io</Filter>
+    </ClInclude>
+    <ClInclude Include="io\Data_Reader.h">
+      <Filter>io</Filter>
+    </ClInclude>
+    <ClInclude Include="io\audio\minisdl_audio.h">
+      <Filter>io</Filter>
+    </ClInclude>
+    <ClInclude Include="io\audio\arch.h">
+      <Filter>io\resample</Filter>
+    </ClInclude>
+    <ClInclude Include="io\audio\fixed_arm4.h">
+      <Filter>io\resample</Filter>
+    </ClInclude>
+    <ClInclude Include="io\audio\fixed_arm5e.h">
+      <Filter>io\resample</Filter>
+    </ClInclude>
+    <ClInclude Include="io\audio\fixed_bfin.h">
+      <Filter>io\resample</Filter>
+    </ClInclude>
+    <ClInclude Include="io\audio\fixed_debug.h">
+      <Filter>io\resample</Filter>
+    </ClInclude>
+    <ClInclude Include="io\audio\fixed_generic.h">
+      <Filter>io\resample</Filter>
+    </ClInclude>
+    <ClInclude Include="io\audio\resample_neon.h">
+      <Filter>io\resample</Filter>
+    </ClInclude>
+    <ClInclude Include="io\audio\resample_sse.h">
+      <Filter>io\resample</Filter>
+    </ClInclude>
+    <ClInclude Include="io\audio\speex_resampler.h">
+      <Filter>io\resample</Filter>
+    </ClInclude>
+    <ClInclude Include="io\audio\stack_alloc.h">
+      <Filter>io\resample</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="gui\emu_wtl.rc" />
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="emu_wtl.ico" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="gui\emu_wtl.ico" />
+    <None Include="gui\icon.ico" />
+    <None Include="gui\small.ico" />
+    <None Include="ReadMe.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="blargg">
+      <UniqueIdentifier>{102af96c-587b-4b93-b8c3-a8039c01e08f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="io">
+      <UniqueIdentifier>{d1bc58e8-62ef-4db2-9c8a-646c5f894846}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="io\resample">
+      <UniqueIdentifier>{65f0343b-8f74-4c00-a39c-6b102f3f47c5}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>

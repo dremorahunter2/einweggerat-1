@@ -136,7 +136,7 @@ public:
 			timeBeginPeriod(gwTimerRes);
 
 			CHAR szFileName[MAX_PATH];
-			string ansi = ansi_from_utf16(L"smw.sfc");
+			string ansi = ansi_from_utf16(L"zelda.z64");
 			strcpy(szFileName, ansi.c_str());
 			emulator->loadfile(szFileName);
 

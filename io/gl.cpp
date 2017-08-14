@@ -206,6 +206,29 @@ void init_framebuffer(int width, int height)
 	glViewport(0, 0, w, h);
 }
 
+
+ void setVSync(bool sync)
+ {
+	 // Function pointer for the wgl extention function we need to enable/disable
+	 // vsync
+	 typedef BOOL(APIENTRY *PFNWGLSWAPINTERVALPROC)(int);
+	 PFNWGLSWAPINTERVALPROC wglSwapIntervalEXT = 0;
+
+	 const char *extensions = (char*)glGetString(GL_EXTENSIONS);
+
+	 if (strstr(extensions, "WGL_EXT_swap_control") == 0)
+	 {
+		 return;
+	 }
+	 else
+	 {
+		 wglSwapIntervalEXT = (PFNWGLSWAPINTERVALPROC)wglGetProcAddress("wglSwapIntervalEXT");
+
+		 if (wglSwapIntervalEXT)
+			 wglSwapIntervalEXT(sync);
+	 }
+ }
+
 void create_window(int width, int height, HWND hwnd) {
 	
 	g_video.hwnd = hwnd;
@@ -252,6 +275,7 @@ void create_window(int width, int height, HWND hwnd) {
 	gladLoadGL();
 	init_shaders();
 	resize_cb(width, height);
+	setVSync(1);
 	g_win = true;
 }
 

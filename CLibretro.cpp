@@ -1,12 +1,239 @@
 #include "stdafx.h"
 #include <windows.h>
+#define OUTSIDE_SPEEX
 #include "CLibretro.h"
 #include "libretro.h"
 #include "io/gl_render.h"
 #include "gui/utf8conv.h"
-#include "io/audio/Sound_Queue.h"
+
 using namespace std;
 using namespace utf8util;
+
+#define SAMPLE_COUNT 8192
+
+	bool Fifo::init(size_t size)
+	{
+		_mutex = SDL_CreateMutex();
+
+		if (!_mutex)
+		{
+			return false;
+		}
+
+		_buffer = (uint8_t*)malloc(size);
+
+		if (_buffer == NULL)
+		{
+			SDL_DestroyMutex(_mutex);
+			return false;
+		}
+
+		_size = _avail = size;
+		_first = _last = 0;
+		return true;
+	}
+	void Fifo::destroy()
+	{
+		::free(_buffer);
+		SDL_DestroyMutex(_mutex);
+	}
+	void Fifo::reset()
+	{
+		_avail = _size;
+		_first = _last = 0;
+	}
+
+
+	void Fifo::read(void* data, size_t size)
+	{
+		SDL_LockMutex(_mutex);
+
+		size_t first = size;
+		size_t second = 0;
+
+		if (first > _size - _first)
+		{
+			first = _size - _first;
+			second = size - first;
+		}
+
+		uint8_t* src = _buffer + _first;
+		memcpy(data, src, first);
+		memcpy((uint8_t*)data + first, _buffer, second);
+
+		_first = (_first + size) % _size;
+		_avail += size;
+
+		SDL_UnlockMutex(_mutex);
+	}
+	void Fifo::write(const void* data, size_t size)
+	{
+		SDL_LockMutex(_mutex);
+
+		size_t first = size;
+		size_t second = 0;
+
+		if (first > _size - _last)
+		{
+			first = _size - _last;
+			second = size - first;
+		}
+
+		uint8_t* dest = _buffer + _last;
+		memcpy(dest, data, first);
+		memcpy(_buffer, (uint8_t*)data + first, second);
+
+		_last = (_last + size) % _size;
+		_avail -= size;
+
+		SDL_UnlockMutex(_mutex);
+	}
+
+	size_t Fifo::occupied()
+	{
+		size_t avail;
+
+		SDL_LockMutex(_mutex);
+		avail = _size - _avail;
+		SDL_UnlockMutex(_mutex);
+
+		return avail;
+	}
+
+	size_t Fifo::free()
+	{
+		size_t avail;
+
+		SDL_LockMutex(_mutex);
+		avail = _avail;
+		SDL_UnlockMutex(_mutex);
+
+		return avail;
+	}
+
+	static void sdl_audio_callback(void* user_data, Uint8* out, int count) {
+		((Audio*)user_data)->fill_buffer(out, count);
+	}
+
+	bool Audio::init(unsigned sample_rate)
+	{
+		_opened = true;
+		_mute = false;
+		_scale = 1.0f;
+		_samples = NULL;
+
+		_coreRate = 0;
+		_resampler = NULL;
+		_sampleRate = 44100;
+		setRate(sample_rate);
+
+		SDL_AudioSpec want;
+		memset(&want, 0, sizeof(want));
+
+		want.freq = 44100;
+		want.format = AUDIO_S16SYS;
+		want.channels = 2;
+		want.samples = 1024;
+		want.callback = ::sdl_audio_callback;
+		want.userdata = this;
+
+
+		// Initialize the audio system
+		if (SDL_AudioInit(NULL) < 0)return false;
+		if (SDL_OpenAudio(&want, &_audioSpec) < 0)
+		{
+			fprintf(stderr, "Could not open the audio hardware or the desired audio output format\n");
+			return 1;
+		}
+		_fifo = new Fifo();
+		_fifo->init(_audioSpec.size * 2);
+	
+		SDL_PauseAudio(0);
+	}
+	void Audio::destroy()
+	{
+		{
+			if (_resampler != NULL)
+			{
+				speex_resampler_destroy(_resampler);
+			}
+		}
+	}
+	void Audio::reset()
+	{
+
+	}
+
+	bool Audio::setRate(double rate)
+	{
+		if (_resampler != NULL)
+		{
+			speex_resampler_destroy(_resampler);
+			_resampler = NULL;
+		}
+
+		_coreRate = floor(rate + 0.5);
+
+		if (_coreRate != _sampleRate)
+		{
+			int error;
+			_resampler = speex_resampler_init(2, _coreRate, _sampleRate, SPEEX_RESAMPLER_QUALITY_DEFAULT, &error);
+		}
+		return true;
+
+	}
+	void Audio::mix(const int16_t* samples, size_t frames)
+	{
+		_samples = samples;
+		_frames = frames;
+
+		uint32_t in_len = frames * 2;
+		uint32_t out_len = trunc((uint32_t)(in_len * _sampleRate / _coreRate))+1;
+
+		int16_t* output = (int16_t*)alloca(out_len * 2);
+
+		if (output == NULL)
+		{
+			return;
+		}
+
+		if (_resampler != NULL)
+		{
+			int error = speex_resampler_process_int(_resampler, 0, samples, &in_len, output, &out_len);
+		}
+		else
+		{
+			memcpy(output, samples, out_len * 2);
+		}
+
+		size_t size = out_len * 2;
+
+	again:
+		size_t avail = _fifo->free();
+
+		if (size > avail)
+		{
+			SDL_Delay(1);
+			goto again;
+		}
+
+		_fifo->write(output, size);
+	}
+
+	void Audio::fill_buffer(Uint8* out, int count) {
+		size_t avail = _fifo->occupied();
+		if (avail < (size_t)count)
+		{
+			_fifo->read((void*)out, avail);
+			memset((void*)(out + avail), 0, count - avail);
+		}
+		else
+		{
+			_fifo->read((void*)out, count);
+		}
+	}
+
+
 
 static struct {
 	HMODULE handle;
@@ -60,7 +287,7 @@ static void core_log(enum retro_log_level level, const char *fmt, ...) {
 	sprintf(buffer2, "[%s] %s", levelstr[level], buffer);
 	wstring wtf = utf16_from_utf8(buffer2);
 	OutputDebugString(wtf.c_str());
-
+	fprintf(stdout, "%s",buffer2);
 	if (level == RETRO_LOG_ERROR)
 		exit(EXIT_FAILURE);
 }
@@ -73,28 +300,16 @@ uintptr_t core_get_current_framebuffer() {
 #include <Shlwapi.h>
 #pragma comment(lib, "shlwapi.lib")
 
-TCHAR* GetThisPath(TCHAR* dest, size_t destSize)
+void GetThisPath(TCHAR* dest, size_t destSize)
 {
-	if (!dest) return NULL;
-	if (MAX_PATH > destSize) return NULL;
-
-	DWORD length = GetModuleFileName(NULL, dest, destSize);
-	PathRemoveFileSpec(dest);
-	return dest;
+	TCHAR Buffer[512];
+	DWORD dwRet;
+	dwRet = GetCurrentDirectory(512, dest);
 }
 
 bool core_environment(unsigned cmd, void *data) {
 	bool *bval;
-	TCHAR syspath[512] = { 0 };
-	GetThisPath(syspath, 512);
-	lstrcat(syspath, L":\\system");
-	TCHAR savepath[512] = { 0 };
-	GetThisPath(savepath, 512);
-	lstrcat(savepath, L"\\saves\\");
-	string ansi = ansi_from_utf16(syspath);
-	string ansi2 = utf8_from_utf16(savepath);
-	char *sys_path = strdup(ansi.c_str());
-	char *save_path = NULL;
+	char *sys_path = "system";
 
 	switch (cmd) {
 	case RETRO_ENVIRONMENT_GET_LOG_INTERFACE: {
@@ -106,15 +321,30 @@ bool core_environment(unsigned cmd, void *data) {
 		bval = (bool*)data;
 		*bval = true;
 		return true;
-	case RETRO_ENVIRONMENT_GET_SYSTEM_DIRECTORY:
-		//sys_path = strdup(ansi.c_str());
-		*(char**)data = sys_path;
-		break;
-	case RETRO_ENVIRONMENT_GET_SAVE_DIRECTORY:
-		save_path = strdup(ansi.c_str());
-		*(char**)data = save_path;
-		break;
+	case RETRO_ENVIRONMENT_GET_SYSTEM_DIRECTORY: // 9
+	case RETRO_ENVIRONMENT_GET_SAVE_DIRECTORY: // 31
+	{
+		char **ppDir = (char**)data;
+		*ppDir = (char*)sys_path;
+		return true;
+	}
+	break;
 
+	case RETRO_ENVIRONMENT_GET_VARIABLE:
+	{
+		{
+			struct retro_variable * variable = (struct retro_variable*)data;
+			if (!strncmp(variable->key, "mupen64plus-aspect", strlen("mupen64plus-aspect")))
+			{
+				variable->value = "4:3";
+			}
+			if (!strncmp(variable->key, "mupen64plus-43screensize", strlen("mupen64plus-43screensize")))
+			{
+					variable->value = "640x480";
+			}
+		}
+	}
+	break;
 	case RETRO_ENVIRONMENT_SET_PIXEL_FORMAT: {
 		const enum retro_pixel_format *fmt = (enum retro_pixel_format *)data;
 		if (*fmt > RETRO_PIXEL_FORMAT_RGB565)
@@ -153,23 +383,37 @@ static int16_t core_input_state(unsigned port, unsigned device, unsigned index, 
 }
 
 
-Sound_Queue* soundQueue;
+void CLibretro::core_audio_sample(int16_t left, int16_t right)
+{
+	if (_samplesCount < SAMPLE_COUNT - 1)
+	{
+		_samples[_samplesCount++] = left;
+		_samples[_samplesCount++] = right;
+	}
+}
+
+
+size_t CLibretro::core_audio_sample_batch(const int16_t *data, size_t frames)
+{
+	if (_samplesCount < SAMPLE_COUNT - frames * 2 + 1)
+	{
+		memcpy(_samples + _samplesCount, data, frames * 2 * sizeof(int16_t));
+		_samplesCount += frames * 2;
+	}
+	return frames;
+}
+
 
 static void core_audio_sample(int16_t left, int16_t right) {
-	int16_t buf[2] = { left, right };
-	soundQueue->write(buf, 1);
-
-//	WindowsAudio::Write((unsigned char*)buf, sizeof(*buf) * 2);
+	CLibretro* lib = CLibretro::GetSingleton();
+	lib->core_audio_sample(left, right);
 }
 
 
 static size_t core_audio_sample_batch(const int16_t *data, size_t frames) {
-	//return audio_write(data, frames);
-
-
-	soundQueue->write((int16_t*)data,frames);
+	CLibretro* lib = CLibretro::GetSingleton();
+	lib->core_audio_sample_batch(data, frames);
 	return frames;
-	//WindowsAudio::Write((unsigned char*)data, frames * 2 * sizeof(*data) );
 }
 
 bool core_load(TCHAR *sofile) {
@@ -281,7 +525,10 @@ bool CLibretro::loadfile(char* filename)
 	g_video.hw.context_reset = ::noop;
 	g_video.hw.context_destroy = ::noop;
 
-	core_load(L"snes9x2005_libretro.dll");
+	AllocConsole();
+	AttachConsole(GetCurrentProcessId());
+	freopen("CON", "w", stdout);
+	core_load(L"mupen64plus_libretro.dll");
 
 	FILE *Input = fopen(filename, "rb");
 	if (!Input) return(NULL);
@@ -310,11 +557,14 @@ bool CLibretro::loadfile(char* filename)
 	if (!g_retro.retro_load_game(&info)) return false;
 	g_retro.retro_get_system_av_info(&av);
 	::video_configure(&av.geometry,emulator_hwnd);
-	//audio_init(av.timing.sample_rate);
-	//WindowsAudio::Open(2, av.timing.sample_rate);
+	_samples = (int16_t*)malloc(SAMPLE_COUNT);
+	_audio = new Audio();
+	double orig_ratio = (double)60 /av.timing.fps;
+	double sampleRate = av.timing.sample_rate * 60 / av.timing.fps;
+	_audio->init(sampleRate);
+	
 
-	soundQueue = new Sound_Queue;
-	soundQueue->init(av.timing.sample_rate, 120, emulator_hwnd);
+	//WindowsAudio::Open(2, av.timing.sample_rate);
 
 
 	if (info.data)
@@ -330,7 +580,7 @@ bool CLibretro::loadfile(char* filename)
 	isEmulating = true;
 	listDeltaMA.clear();
 	target_fps = av.timing.fps;
-	target_samplerate = av.timing.sample_rate;
+	target_samplerate = 44100;
 	return isEmulating;
 }
 
@@ -347,76 +597,20 @@ void CLibretro::splash()
 	}
 }
 
-
-
-double CLibretro::getDeltaMovingAverage(double delta, int num_iter)
-{
-	//if (listDeltaMA.size() == num_iter) listDeltaMA.clear();
-	listDeltaMA.push_back(delta);
-	if (listDeltaMA.size() >=num_iter) listDeltaMA.pop_front();
-	double sum = 0;
-	for (std::list<double>::iterator p = listDeltaMA.begin(); p != listDeltaMA.end(); ++p)
-		sum += (double)*p;
-	return sum / listDeltaMA.size();
-}
-
 void CLibretro::run()
 {
 	if(isEmulating)
 	{
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
-		g_retro.retro_run();
-
-		soundQueue->audio_sync();
-		/*
-		if (orig_ratio != 1.0)
+	
+		_samplesCount = 0;
+		do
 		{
-			size_t available = write_avail();
-			size_t total = buffer_size();
-			int half = total / 2;
-			int delta_half = available - half;
-			double adjust = 1.0 + 0.005 * ((double)delta_half / half);
+			g_retro.retro_run();
+		} while (_samplesCount == 0);
 
-			unsigned low_water_size = total - (unsigned)(total * 3 / 4);
-			double avg = getDeltaMovingAverage(adjust, write_avail());
-			if (avg != last_adjust && available < low_water_size)
-			{
-				set_samplerate(samplerate_d*avg);
-				last_adjust = avg;
-			}
-		}*/
-
-		
-
-		DWORD current_ticks = milliseconds_now();
-		
-		DWORD target_ticks = baseticks + (DWORD)((float)framecount * rateticks);
-		framecount++;
-		
-		if (current_ticks <= target_ticks) {
-			DWORD the_delay = target_ticks - current_ticks;
-			Sleep(the_delay);
-		}
-	//	else {
-		//	framecount = 0;
-		//	baseticks = milliseconds_now();
-		//}
-		double fps = ((double)framecount * 1000) / (current_ticks - baseticks_base);
-		double avg = getDeltaMovingAverage(fps, 2048);
-		TCHAR str[256] = { 0 };
-		swprintf(str, L"[%f fps] [%f mean fps] [%f target fps]", fps, avg, target_fps);
-		SetWindowText(emulator_hwnd, str);
-
-		size_t available = soundQueue->write_avail();
-		size_t total = soundQueue->buffer_size();
-		unsigned low_water_size = total - (unsigned)(total * 3 / 4);
-
-		if (avg < 60 && available < low_water_size) {
-			double sampleRate = target_samplerate * avg / target_fps;
-			soundQueue->set_samplerate(sampleRate);
-		}
-
-
+		_audio->mix(_samples, _samplesCount / 2);
+		//Sleep(1);
 	}
 }
 bool CLibretro::init(HWND hwnd)
