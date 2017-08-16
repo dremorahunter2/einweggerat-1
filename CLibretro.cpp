@@ -106,13 +106,14 @@ void fifo_read(fifo_buffer_t *buffer, void *in_buf, size_t size)
 static mal_uint32 sdl_audio_callback(mal_device* pDevice, mal_uint32 frameCount, void* pSamples)
 {
 	//convert from samples to the actual number of bytes.
-	int samplecount = frameCount*pDevice->channels * mal_get_sample_size_in_bytes(mal_format_s16);
-	return ((Audio*)pDevice->pUserData)->fill_buffer((uint8_t*)pSamples, samplecount)/4;
+	int count_bytes = frameCount * pDevice->channels * mal_get_sample_size_in_bytes(mal_format_s16);
+	return ((Audio*)pDevice->pUserData)->fill_buffer((uint8_t*)pSamples, count_bytes)/4;
 	//...and back to samples
 }
 
 mal_uint32 Audio::fill_buffer(uint8_t* out, mal_uint32 count) {
 	size_t avail = fifo_read_avail(_fifo);
+	
 	if (avail)
 	{
 		if (avail < (size_t)count)
@@ -197,7 +198,7 @@ mal_uint32 Audio::fill_buffer(uint8_t* out, mal_uint32 count) {
 		uint32_t out_len = trunc((uint32_t)(in_len * _sampleRate / _coreRate))+1;
 
 		int16_t* output = (int16_t*)alloca(out_len * 2);
-
+		
 		if (output == NULL)
 		{
 			return;
@@ -454,7 +455,8 @@ bool core_load(TCHAR *sofile) {
 	g_retro.initialized = true;
 }
 
-static void noop() { int i = 20;
+static void noop() { 
+int i = 20;
 i++;
 }
 
@@ -513,11 +515,11 @@ bool CLibretro::loadfile(char* filename)
 	struct retro_game_info info = { filename, 0 };
 
 	g_video = { 0 };
-//	g_video.hw.version_major = 3;
-//	g_video.hw.version_minor = 3;
-//	g_video.hw.context_type = RETRO_HW_CONTEXT_OPENGL_CORE;
-	g_video.hw.context_reset = ::noop;
-	g_video.hw.context_destroy = ::noop;
+	g_video.hw.version_major = 4;
+	g_video.hw.version_minor = 5;
+	g_video.hw.context_type = RETRO_HW_CONTEXT_OPENGL_CORE;
+	g_video.hw.context_reset = noop;
+	g_video.hw.context_destroy = noop;
 
 	AllocConsole();
 	AttachConsole(GetCurrentProcessId());
@@ -554,7 +556,8 @@ bool CLibretro::loadfile(char* filename)
 	_samples = (int16_t*)malloc(SAMPLE_COUNT);
 	_audio = new Audio();
 	double orig_ratio = (double)60 /av.timing.fps;
-	double sampleRate = av.timing.sample_rate * 60 / av.timing.fps;
+	//double sampleRate = av.timing.sample_rate * 60 / av.timing.fps;
+	double sampleRate = av.timing.sample_rate;
 	_audio->init(sampleRate);
 	
 
@@ -604,7 +607,7 @@ void CLibretro::run()
 		} while (_samplesCount == 0);
 
 		_audio->mix(_samples, _samplesCount / 2);
-		//Sleep(1);
+		Sleep(1);
 	}
 }
 bool CLibretro::init(HWND hwnd)

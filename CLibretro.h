@@ -4,6 +4,7 @@
 #include <list>
 #define OUTSIDE_SPEEX
 #include "io/audio/speex_resampler.h"
+#define MAL_NO_WASAPI
 #include "io/audio/mini_al.h"
 
 #ifdef __cplusplus

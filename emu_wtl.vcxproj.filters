@@ -25,9 +25,6 @@
     <ClCompile Include="io\glad.c">
       <Filter>io</Filter>
     </ClCompile>
-    <ClCompile Include="io\glad_wgl.c">
-      <Filter>io</Filter>
-    </ClCompile>
     <ClCompile Include="io\guid_container.cpp">
       <Filter>io</Filter>
     </ClCompile>
@@ -76,9 +73,6 @@
       <Filter>io</Filter>
     </ClInclude>
     <ClInclude Include="io\gl_render.h">
-      <Filter>io</Filter>
-    </ClInclude>
-    <ClInclude Include="io\glad_wgl.h">
       <Filter>io</Filter>
     </ClInclude>
     <ClInclude Include="io\guid_container.h">

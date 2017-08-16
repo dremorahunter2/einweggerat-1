@@ -140,12 +140,13 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
-      <Optimization>MaxSpeed</Optimization>
+      <Optimization>MinSpace</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;OUTSIDE_SPEEX;FLOATING_POINT;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PrecompiledHeaderFile>..\StdAfx.h</PrecompiledHeaderFile>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <FavorSizeOrSpeed>Size</FavorSizeOrSpeed>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -153,7 +154,7 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <OutputFile>out\emu_wtl.exe</OutputFile>
-      <AdditionalDependencies>d2d1.lib;xinput.lib;dxguid.lib;dsound.lib;Xaudio2.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>d2d1.lib;xinput.lib;dxguid.lib;winmm.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PreBuildEvent>
       <Command>SubWCRev.exe $(SolutionDir) $(ProjectDir)\svn_version.txt $(ProjectDir)\svn_version.h</Command>
@@ -222,7 +223,6 @@
     <ClInclude Include="io\blargg_source.h" />
     <ClInclude Include="io\Data_Reader.h" />
     <ClInclude Include="io\dinput.h" />
-    <ClInclude Include="io\glad_wgl.h" />
     <ClInclude Include="io\gl_render.h" />
     <ClInclude Include="io\guid_container.h" />
     <ClInclude Include="io\input.h" />
@@ -247,7 +247,6 @@
     <ClCompile Include="io\dinput.cpp" />
     <ClCompile Include="io\gl.cpp" />
     <ClCompile Include="io\glad.c" />
-    <ClCompile Include="io\glad_wgl.c" />
     <ClCompile Include="io\guid_container.cpp" />
     <ClCompile Include="io\input.cpp" />
     <ClCompile Include="stdafx.cpp">

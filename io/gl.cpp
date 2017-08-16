@@ -1,7 +1,6 @@
 #include <windows.h>
 #include "../libretro.h"
 #include "glad.h"
-#include "glad_wgl.h"
 #include "gl_render.h"
 
 video g_video;
@@ -206,29 +205,6 @@ void init_framebuffer(int width, int height)
 	glViewport(0, 0, w, h);
 }
 
-
- void setVSync(bool sync)
- {
-	 // Function pointer for the wgl extention function we need to enable/disable
-	 // vsync
-	 typedef BOOL(APIENTRY *PFNWGLSWAPINTERVALPROC)(int);
-	 PFNWGLSWAPINTERVALPROC wglSwapIntervalEXT = 0;
-
-	 const char *extensions = (char*)glGetString(GL_EXTENSIONS);
-
-	 if (strstr(extensions, "WGL_EXT_swap_control") == 0)
-	 {
-		 return;
-	 }
-	 else
-	 {
-		 wglSwapIntervalEXT = (PFNWGLSWAPINTERVALPROC)wglGetProcAddress("wglSwapIntervalEXT");
-
-		 if (wglSwapIntervalEXT)
-			 wglSwapIntervalEXT(sync);
-	 }
- }
-
 void create_window(int width, int height, HWND hwnd) {
 	
 	g_video.hwnd = hwnd;
@@ -237,8 +213,7 @@ void create_window(int width, int height, HWND hwnd) {
 	unsigned int	PixelFormat;
 	PixelFormat = ChoosePixelFormat(g_video.hDC, &pfd);
 	SetPixelFormat(g_video.hDC, PixelFormat, &pfd);
-
-	gladLoadWGL(g_video.hDC);
+	gladLoadGL();
 	if (g_video.hw.context_type == RETRO_HW_CONTEXT_OPENGL_CORE)
 	{
 		GLint attribs_core[] =
@@ -247,13 +222,15 @@ void create_window(int width, int height, HWND hwnd) {
 			0x2091, g_video.hw.version_major,
 			0x2092, g_video.hw.version_minor,
 			// Uncomment this for forward compatibility mode
-			0x2094, 0x0002,
+			//0x2094, 0x0002,
 			// Uncomment this for Compatibility profile
 			// 0x9126, 0x9126,
 			// We are using Core profile here
 			0x9126, 0x00000001,
 			0
 		};
+		typedef HGLRC(APIENTRY * PFNWGLCREATECONTEXTATTRIBSARBPROC)(HDC hDC, HGLRC hShareContext, const int *attribList);
+		static PFNWGLCREATECONTEXTATTRIBSARBPROC pfnCreateContextAttribsARB = 0;
 		HGLRC hTempContext;
 		if (!(hTempContext = wglCreateContext(g_video.hDC)))
 			return;
@@ -262,7 +239,8 @@ void create_window(int width, int height, HWND hwnd) {
 			wglDeleteContext(hTempContext);
 			return;
 		}
-		if (!(g_video.hRC = wglCreateContextAttribsARB(g_video.hDC, 0, attribs_core)))return;
+		pfnCreateContextAttribsARB = reinterpret_cast<PFNWGLCREATECONTEXTATTRIBSARBPROC>(wglGetProcAddress("wglCreateContextAttribsARB"));
+		if (!(g_video.hRC = pfnCreateContextAttribsARB(g_video.hDC, 0, attribs_core)))return;
 		if (!wglMakeCurrent(g_video.hDC, g_video.hRC))return;
 		wglDeleteContext(hTempContext);
 	}
@@ -275,7 +253,6 @@ void create_window(int width, int height, HWND hwnd) {
 	gladLoadGL();
 	init_shaders();
 	resize_cb(width, height);
-	setVSync(1);
 	g_win = true;
 }
 
