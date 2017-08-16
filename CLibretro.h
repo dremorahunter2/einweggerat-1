@@ -2,37 +2,22 @@
 #define CEMULATOR_H
 #include <initguid.h>
 #include <list>
-#include "io/audio/minisdl_audio.h"
 #define OUTSIDE_SPEEX
 #include "io/audio/speex_resampler.h"
-
+#include "io/audio/mini_al.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-
-	class Fifo
+	struct fifo_buffer
 	{
-	public:
-		bool init(size_t size);
-		void destroy();
-		void reset();
-
-		void read(void* data, size_t size);
-		void write(const void* data, size_t size);
-
-		size_t occupied();
-		size_t free();
-
-		SDL_mutex* _mutex;
-		uint8_t*   _buffer;
-		size_t     _size;
-		size_t     _avail;
-		size_t     _first;
-		size_t     _last;
+		uint8_t *buffer;
+		size_t size;
+		size_t first;
+		size_t end;
 	};
-
+	typedef struct fifo_buffer fifo_buffer_t;
 
 	class Audio
 	{
@@ -43,15 +28,14 @@ extern "C" {
 
 	bool setRate(double rate);
 	void mix(const int16_t* samples, size_t frames);
-	void fill_buffer(Uint8* out, int count);
-	static void sdl_audio_callback(void* user_data, Uint8* out, int count);
-
-	SDL_AudioSpec     _audioSpec;
-	SDL_AudioDeviceID _audioDev;
+	mal_uint32 fill_buffer(uint8_t* pSamples, mal_uint32 samplecount);
+	mal_context context;
+	mal_device device;
+	mal_device_config config;
 	unsigned _sampleRate;
 	unsigned _coreRate;
 	SpeexResamplerState* _resampler;
-	Fifo* _fifo;
+	fifo_buffer* _fifo;
 	bool           _opened;
 	bool           _mute;
 	float          _scale;

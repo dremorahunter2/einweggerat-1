@@ -23,6 +23,7 @@
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>emu_wtl</RootNamespace>
     <ProjectName>libretro_player</ProjectName>
+    <WindowsTargetPlatformVersion>8.1</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
@@ -209,7 +210,6 @@
     <ClInclude Include="io\audio\fixed_bfin.h" />
     <ClInclude Include="io\audio\fixed_debug.h" />
     <ClInclude Include="io\audio\fixed_generic.h" />
-    <ClInclude Include="io\audio\minisdl_audio.h" />
     <ClInclude Include="io\audio\resample_neon.h" />
     <ClInclude Include="io\audio\resample_sse.h" />
     <ClInclude Include="io\audio\speex_resampler.h" />
@@ -239,7 +239,6 @@
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|x64'">..\StdAfx.h</PrecompiledHeaderFile>
     </ClCompile>
     <ClCompile Include="io\abstract_file.cpp" />
-    <ClCompile Include="io\audio\minisdl_audio.c" />
     <ClCompile Include="io\audio\resample.c" />
     <ClCompile Include="io\bind_list.cpp" />
     <ClCompile Include="io\blargg_common.cpp" />

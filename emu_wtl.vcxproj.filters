@@ -37,9 +37,6 @@
     <ClCompile Include="io\Data_Reader.cpp">
       <Filter>io</Filter>
     </ClCompile>
-    <ClCompile Include="io\audio\minisdl_audio.c">
-      <Filter>io</Filter>
-    </ClCompile>
     <ClCompile Include="io\audio\resample.c">
       <Filter>io\resample</Filter>
     </ClCompile>
@@ -91,9 +88,6 @@
       <Filter>io</Filter>
     </ClInclude>
     <ClInclude Include="io\Data_Reader.h">
-      <Filter>io</Filter>
-    </ClInclude>
-    <ClInclude Include="io\audio\minisdl_audio.h">
       <Filter>io</Filter>
     </ClInclude>
     <ClInclude Include="io\audio\arch.h">

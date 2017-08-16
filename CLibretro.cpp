@@ -5,115 +5,132 @@
 #include "libretro.h"
 #include "io/gl_render.h"
 #include "gui/utf8conv.h"
+#define MAL_IMPLEMENTATION
+#define MAL_NO_WASAPI
+#include "io/audio/mini_al.h"
 
 using namespace std;
 using namespace utf8util;
 
 #define SAMPLE_COUNT 8192
+#define INLINE 
 
-	bool Fifo::init(size_t size)
+
+static INLINE void fifo_clear(fifo_buffer_t *buffer)
+{
+	buffer->first = 0;
+	buffer->end = 0;
+}
+
+void fifo_write(fifo_buffer_t *buffer, const void *in_buf, size_t size);
+
+void fifo_read(fifo_buffer_t *buffer, void *in_buf, size_t size);
+
+static INLINE void fifo_free(fifo_buffer_t *buffer)
+{
+	if (!buffer)
+		return;
+
+	free(buffer->buffer);
+	free(buffer);
+}
+
+static INLINE size_t fifo_read_avail(fifo_buffer_t *buffer)
+{
+	return (buffer->end + ((buffer->end < buffer->first) ? buffer->size : 0)) - buffer->first;
+}
+
+static INLINE size_t fifo_write_avail(fifo_buffer_t *buffer)
+{
+	return (buffer->size - 1) - ((buffer->end + ((buffer->end < buffer->first) ? buffer->size : 0)) - buffer->first);
+}
+
+
+fifo_buffer_t *fifo_new(size_t size)
+{
+	uint8_t    *buffer = NULL;
+	fifo_buffer_t *buf = (fifo_buffer_t*)calloc(1, sizeof(*buf));
+
+	if (!buf)
+		return NULL;
+
+	buffer = (uint8_t*)calloc(1, size + 1);
+
+	if (!buffer)
 	{
-		_mutex = SDL_CreateMutex();
+		free(buf);
+		return NULL;
+	}
 
-		if (!_mutex)
+	buf->buffer = buffer;
+	buf->size = size + 1;
+
+	return buf;
+}
+
+void fifo_write(fifo_buffer_t *buffer, const void *in_buf, size_t size)
+{
+	size_t first_write = size;
+	size_t rest_write = 0;
+
+	if (buffer->end + size > buffer->size)
+	{
+		first_write = buffer->size - buffer->end;
+		rest_write = size - first_write;
+	}
+
+	memcpy(buffer->buffer + buffer->end, in_buf, first_write);
+	memcpy(buffer->buffer, (const uint8_t*)in_buf + first_write, rest_write);
+
+	buffer->end = (buffer->end + size) % buffer->size;
+}
+
+
+void fifo_read(fifo_buffer_t *buffer, void *in_buf, size_t size)
+{
+	size_t first_read = size;
+	size_t rest_read = 0;
+
+	if (buffer->first + size > buffer->size)
+	{
+		first_read = buffer->size - buffer->first;
+		rest_read = size - first_read;
+	}
+
+	memcpy(in_buf, (const uint8_t*)buffer->buffer + buffer->first, first_read);
+	memcpy((uint8_t*)in_buf + first_read, buffer->buffer, rest_read);
+
+	buffer->first = (buffer->first + size) % buffer->size;
+}
+
+static mal_uint32 sdl_audio_callback(mal_device* pDevice, mal_uint32 frameCount, void* pSamples)
+{
+	//convert from samples to the actual number of bytes.
+	int samplecount = frameCount*pDevice->channels * mal_get_sample_size_in_bytes(mal_format_s16);
+	return ((Audio*)pDevice->pUserData)->fill_buffer((uint8_t*)pSamples, samplecount)/4;
+	//...and back to samples
+}
+
+mal_uint32 Audio::fill_buffer(uint8_t* out, mal_uint32 count) {
+	size_t avail = fifo_read_avail(_fifo);
+	if (avail)
+	{
+		if (avail < (size_t)count)
 		{
-			return false;
+			fifo_read(_fifo, out, avail);
+			memset((void*)((uint8_t*)out + avail), 0, count - avail);
+			return avail; //convert to number of samples
 		}
-
-		_buffer = (uint8_t*)malloc(size);
-
-		if (_buffer == NULL)
+		else
 		{
-			SDL_DestroyMutex(_mutex);
-			return false;
+			fifo_read(_fifo, out, count);
+			return count;//convert to number of samples
 		}
-
-		_size = _avail = size;
-		_first = _last = 0;
-		return true;
 	}
-	void Fifo::destroy()
-	{
-		::free(_buffer);
-		SDL_DestroyMutex(_mutex);
-	}
-	void Fifo::reset()
-	{
-		_avail = _size;
-		_first = _last = 0;
-	}
+	//memset(out, 0, count);
+	return 0;//convert to number of samples
+}
 
-
-	void Fifo::read(void* data, size_t size)
-	{
-		SDL_LockMutex(_mutex);
-
-		size_t first = size;
-		size_t second = 0;
-
-		if (first > _size - _first)
-		{
-			first = _size - _first;
-			second = size - first;
-		}
-
-		uint8_t* src = _buffer + _first;
-		memcpy(data, src, first);
-		memcpy((uint8_t*)data + first, _buffer, second);
-
-		_first = (_first + size) % _size;
-		_avail += size;
-
-		SDL_UnlockMutex(_mutex);
-	}
-	void Fifo::write(const void* data, size_t size)
-	{
-		SDL_LockMutex(_mutex);
-
-		size_t first = size;
-		size_t second = 0;
-
-		if (first > _size - _last)
-		{
-			first = _size - _last;
-			second = size - first;
-		}
-
-		uint8_t* dest = _buffer + _last;
-		memcpy(dest, data, first);
-		memcpy(_buffer, (uint8_t*)data + first, second);
-
-		_last = (_last + size) % _size;
-		_avail -= size;
-
-		SDL_UnlockMutex(_mutex);
-	}
-
-	size_t Fifo::occupied()
-	{
-		size_t avail;
-
-		SDL_LockMutex(_mutex);
-		avail = _size - _avail;
-		SDL_UnlockMutex(_mutex);
-
-		return avail;
-	}
-
-	size_t Fifo::free()
-	{
-		size_t avail;
-
-		SDL_LockMutex(_mutex);
-		avail = _avail;
-		SDL_UnlockMutex(_mutex);
-
-		return avail;
-	}
-
-	static void sdl_audio_callback(void* user_data, Uint8* out, int count) {
-		((Audio*)user_data)->fill_buffer(out, count);
-	}
 
 	bool Audio::init(unsigned sample_rate)
 	{
@@ -121,34 +138,23 @@ using namespace utf8util;
 		_mute = false;
 		_scale = 1.0f;
 		_samples = NULL;
-
 		_coreRate = 0;
 		_resampler = NULL;
 		_sampleRate = 44100;
 		setRate(sample_rate);
-
-		SDL_AudioSpec want;
-		memset(&want, 0, sizeof(want));
-
-		want.freq = 44100;
-		want.format = AUDIO_S16SYS;
-		want.channels = 2;
-		want.samples = 1024;
-		want.callback = ::sdl_audio_callback;
-		want.userdata = this;
-
-
-		// Initialize the audio system
-		if (SDL_AudioInit(NULL) < 0)return false;
-		if (SDL_OpenAudio(&want, &_audioSpec) < 0)
-		{
-			fprintf(stderr, "Could not open the audio hardware or the desired audio output format\n");
-			return 1;
+		if (mal_context_init(NULL, 0, &context) != MAL_SUCCESS) {
+			printf("Failed to initialize context.");
+			return -3;
 		}
-		_fifo = new Fifo();
-		_fifo->init(_audioSpec.size * 2);
-	
-		SDL_PauseAudio(0);
+
+		config = mal_device_config_init_playback(mal_format_s16, 2,_sampleRate, ::sdl_audio_callback);
+		config.bufferSizeInFrames = 1024;
+		_fifo = fifo_new(SAMPLE_COUNT);
+		if (mal_device_init(&context, mal_device_type_playback, NULL, &config, this, &device) != MAL_SUCCESS) {
+			mal_context_uninit(&context);
+			return -4;
+		}
+		mal_device_start(&device);
 	}
 	void Audio::destroy()
 	{
@@ -209,29 +215,17 @@ using namespace utf8util;
 		size_t size = out_len * 2;
 
 	again:
-		size_t avail = _fifo->free();
+		size_t avail = fifo_write_avail(_fifo);
 
 		if (size > avail)
 		{
-			SDL_Delay(1);
+			Sleep(1);
 			goto again;
 		}
-
-		_fifo->write(output, size);
+		fifo_write(_fifo, output, size);
 	}
-
-	void Audio::fill_buffer(Uint8* out, int count) {
-		size_t avail = _fifo->occupied();
-		if (avail < (size_t)count)
-		{
-			_fifo->read((void*)out, avail);
-			memset((void*)(out + avail), 0, count - avail);
-		}
-		else
-		{
-			_fifo->read((void*)out, count);
-		}
-	}
+	//we need to convert to the number of samples
+	//SDL expects the number of bytes.....
 
 
 
@@ -528,7 +522,7 @@ bool CLibretro::loadfile(char* filename)
 	AllocConsole();
 	AttachConsole(GetCurrentProcessId());
 	freopen("CON", "w", stdout);
-	core_load(L"mupen64plus_libretro.dll");
+	core_load(L"snes9x_libretro.dll");
 
 	FILE *Input = fopen(filename, "rb");
 	if (!Input) return(NULL);
