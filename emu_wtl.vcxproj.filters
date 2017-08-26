@@ -87,27 +87,6 @@
     <ClInclude Include="io\audio\arch.h">
       <Filter>io\resample</Filter>
     </ClInclude>
-    <ClInclude Include="io\audio\fixed_arm4.h">
-      <Filter>io\resample</Filter>
-    </ClInclude>
-    <ClInclude Include="io\audio\fixed_arm5e.h">
-      <Filter>io\resample</Filter>
-    </ClInclude>
-    <ClInclude Include="io\audio\fixed_bfin.h">
-      <Filter>io\resample</Filter>
-    </ClInclude>
-    <ClInclude Include="io\audio\fixed_debug.h">
-      <Filter>io\resample</Filter>
-    </ClInclude>
-    <ClInclude Include="io\audio\fixed_generic.h">
-      <Filter>io\resample</Filter>
-    </ClInclude>
-    <ClInclude Include="io\audio\resample_neon.h">
-      <Filter>io\resample</Filter>
-    </ClInclude>
-    <ClInclude Include="io\audio\resample_sse.h">
-      <Filter>io\resample</Filter>
-    </ClInclude>
     <ClInclude Include="io\audio\speex_resampler.h">
       <Filter>io\resample</Filter>
     </ClInclude>

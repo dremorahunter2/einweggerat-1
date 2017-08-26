@@ -206,13 +206,6 @@
     <ClInclude Include="gui\utf8conv.h" />
     <ClInclude Include="io\abstract_file.h" />
     <ClInclude Include="io\audio\arch.h" />
-    <ClInclude Include="io\audio\fixed_arm4.h" />
-    <ClInclude Include="io\audio\fixed_arm5e.h" />
-    <ClInclude Include="io\audio\fixed_bfin.h" />
-    <ClInclude Include="io\audio\fixed_debug.h" />
-    <ClInclude Include="io\audio\fixed_generic.h" />
-    <ClInclude Include="io\audio\resample_neon.h" />
-    <ClInclude Include="io\audio\resample_sse.h" />
     <ClInclude Include="io\audio\speex_resampler.h" />
     <ClInclude Include="io\audio\stack_alloc.h" />
     <ClInclude Include="io\bind_list.h" />

@@ -551,15 +551,23 @@ bool CLibretro::loadfile(char* filename)
 	::video_configure(&av.geometry,emulator_hwnd);
 	_samples = (int16_t*)malloc(SAMPLE_COUNT);
 	_audio = new Audio();
-	double orig_ratio = (double)60 /av.timing.fps;
-	//double sampleRate = av.timing.sample_rate * 60 / av.timing.fps;
-	double sampleRate = av.timing.sample_rate;
+	double orig_ratio = 0;
+
+	DEVMODE lpDevMode;
+	memset(&lpDevMode, 0, sizeof(DEVMODE));
+	lpDevMode.dmSize = sizeof(DEVMODE);
+	lpDevMode.dmDriverExtra = 0;
+
+	if (EnumDisplaySettings(NULL, ENUM_CURRENT_SETTINGS, &lpDevMode) == 0) {
+		orig_ratio = (double)60 / av.timing.fps; // default value if cannot retrieve from user settings.
+	}
+	else
+	{
+		orig_ratio = (double)lpDevMode.dmDisplayFrequency / av.timing.fps;
+	}
+	double sampleRate = av.timing.sample_rate * orig_ratio;
+	//double sampleRate = av.timing.sample_rate;
 	_audio->init(sampleRate);
-	
-
-	//WindowsAudio::Open(2, av.timing.sample_rate);
-
-
 	if (info.data)
 	free((void*)info.data);
 
