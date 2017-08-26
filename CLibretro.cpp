@@ -280,11 +280,7 @@ static void core_log(enum retro_log_level level, const char *fmt, ...) {
 		return;
 
 	sprintf(buffer2, "[%s] %s", levelstr[level], buffer);
-	wstring wtf = utf16_from_utf8(buffer2);
-	OutputDebugString(wtf.c_str());
 	fprintf(stdout, "%s",buffer2);
-	if (level == RETRO_LOG_ERROR)
-		exit(EXIT_FAILURE);
 }
 
 
@@ -526,7 +522,7 @@ bool CLibretro::loadfile(char* filename)
 	freopen("CON", "w", stdout);
 	core_load(L"snes9x_libretro.dll");
 
-	FILE *Input = fopen(filename, "rb");
+	FILE *Input = fopen("smw.sfc", "rb");
 	if (!Input) return(NULL);
 	// Get the filesize
 	fseek(Input, 0, SEEK_END);
