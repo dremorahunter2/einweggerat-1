@@ -1,13 +1,13 @@
 #include "stdafx.h"
 #include <windows.h>
 #define OUTSIDE_SPEEX
+#define MAL_IMPLEMENTATION
+#define MAL_NO_WASAPI
 #include "CLibretro.h"
 #include "libretro.h"
 #include "io/gl_render.h"
 #include "gui/utf8conv.h"
-#define MAL_IMPLEMENTATION
-#define MAL_NO_WASAPI
-#include "io/audio/mini_al.h"
+
 
 using namespace std;
 using namespace utf8util;
@@ -184,7 +184,7 @@ mal_uint32 Audio::fill_buffer(uint8_t* out, mal_uint32 count) {
 		if (_coreRate != _sampleRate)
 		{
 			int error;
-			_resampler = speex_resampler_init(2, _coreRate, _sampleRate, SPEEX_RESAMPLER_QUALITY_DEFAULT, &error);
+			_resampler = speex_resampler_init(2, _coreRate, _sampleRate, SPEEX_RESAMPLER_QUALITY_DESKTOP, &error);
 		}
 		return true;
 
@@ -344,6 +344,7 @@ bool core_environment(unsigned cmd, void *data) {
 	}
 	case RETRO_ENVIRONMENT_SET_HW_RENDER: {
 		struct retro_hw_render_callback *hw = (struct retro_hw_render_callback*)data;
+		if (hw->context_type == RETRO_HW_CONTEXT_VULKAN)return false;
 		hw->get_current_framebuffer = core_get_current_framebuffer;
 		hw->get_proc_address = (retro_hw_get_proc_address_t)wglGetProcAddress;
 		g_video.hw = *hw;
