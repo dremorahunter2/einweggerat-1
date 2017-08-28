@@ -37,6 +37,9 @@
     <ClCompile Include="io\audio\resample.c">
       <Filter>io\resample</Filter>
     </ClCompile>
+    <ClCompile Include="libretro-common-master\queues\fifo_queue.c">
+      <Filter>io\resample</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="CLibretro.h" />

@@ -70,23 +70,23 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LinkIncremental>true</LinkIncremental>
-    <IncludePath>C:\codecrack\src\wtl\include;$(IncludePath)</IncludePath>
+    <IncludePath>C:\codecrack\src\wtl\include;C:\codecrack\code\gitmudlord\libretro_player\libretro-common-master\include;$(IncludePath)</IncludePath>
     <PreBuildEventUseInBuild>false</PreBuildEventUseInBuild>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
-    <IncludePath>C:\codecrack\wtl\Include;$(IncludePath)</IncludePath>
+    <IncludePath>C:\codecrack\wtl\Include;C:\codecrack\code\gitmudlord\libretro_player\libretro-common-master\include;$(IncludePath)</IncludePath>
     <PreBuildEventUseInBuild>false</PreBuildEventUseInBuild>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
-    <IncludePath>C:\codecrack\src\wtl\include;$(IncludePath)</IncludePath>
+    <IncludePath>C:\codecrack\src\wtl\include;C:\codecrack\code\gitmudlord\libretro_player\libretro-common-master\include;$(IncludePath)</IncludePath>
     <LibraryPath>$(LibraryPath)</LibraryPath>
     <PreBuildEventUseInBuild>false</PreBuildEventUseInBuild>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
-    <IncludePath>C:\codecrack\wtl\Include;$(IncludePath)</IncludePath>
+    <IncludePath>C:\codecrack\wtl\Include;C:\codecrack\code\gitmudlord\libretro_player\libretro-common-master\include;$(IncludePath)</IncludePath>
     <LibraryPath>$(LibraryPath)</LibraryPath>
     <PreBuildEventUseInBuild>false</PreBuildEventUseInBuild>
   </PropertyGroup>
@@ -242,6 +242,7 @@
     <ClCompile Include="io\glad.c" />
     <ClCompile Include="io\guid_container.cpp" />
     <ClCompile Include="io\input.cpp" />
+    <ClCompile Include="libretro-common-master\queues\fifo_queue.c" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>

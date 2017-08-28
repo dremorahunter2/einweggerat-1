@@ -6,19 +6,11 @@
 #include "io/audio/speex_resampler.h"
 #define MAL_NO_WASAPI
 #include "io/audio/mini_al.h"
+#include "libretro-common-master/include/queues/fifo_queue.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-	struct fifo_buffer
-	{
-		uint8_t *buffer;
-		size_t size;
-		size_t first;
-		size_t end;
-	};
-	typedef struct fifo_buffer fifo_buffer_t;
 
 	class Audio
 	{
