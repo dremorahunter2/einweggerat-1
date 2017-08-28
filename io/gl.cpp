@@ -259,7 +259,7 @@ void create_window(int width, int height, HWND hwnd) {
 	wglSwapIntervalEXT =
 		(PFNWGLSWAPINTERVALFARPROC)wglGetProcAddress("wglSwapIntervalEXT");
 	if (wglSwapIntervalEXT)
-		wglSwapIntervalEXT(1);
+		wglSwapIntervalEXT(0);
 
 	if (g_video.hw.context_reset)g_video.hw.context_reset();
 	g_win = true;

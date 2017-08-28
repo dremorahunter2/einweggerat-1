@@ -26,6 +26,7 @@ extern "C" {
 	bool init(unsigned sample_rate);
 	void destroy();
 	void reset();
+	HANDLE ghWriteEvent;
 
 	bool setRate(double rate);
 	void mix(const int16_t* samples, size_t frames);
@@ -60,14 +61,11 @@ public:
 	double fps;
 	double target_fps;
 	double target_samplerate;
-	DWORD framecount;
-	float rateticks;
-	DWORD baseticks;
-	DWORD baseticks_base;
-	DWORD lastticks;
 	DWORD rate;
 	std::list<double> listDeltaMA;
-	double getDeltaMovingAverage(double delta, int num_iter);
+	bool sync_video_tick(void);
+	unsigned frame_count;
+	double getDeltaMovingAverage(double delta);
 	bool running();
 	bool loadfile(char* filename);
 	void splash();

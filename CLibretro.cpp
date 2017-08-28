@@ -112,27 +112,13 @@ static mal_uint32 sdl_audio_callback(mal_device* pDevice, mal_uint32 frameCount,
 }
 
 mal_uint32 Audio::fill_buffer(uint8_t* out, mal_uint32 count) {
-	size_t avail = fifo_read_avail(_fifo);
-	
-	if (avail)
-	{
-		if (avail < (size_t)count)
-		{
-			fifo_read(_fifo, out, avail);
-			memset((void*)((uint8_t*)out + avail), 0, count - avail);
-			return avail; //convert to number of samples
-		}
-		else
-		{
-			fifo_read(_fifo, out, count);
-			return count;//convert to number of samples
-		}
-	}
-	//memset(out, 0, count);
-	return 0;//convert to number of samples
+	size_t size = count;
+	size_t amount = fifo_read_avail(_fifo);
+	amount = size > amount ? amount : size;
+	fifo_read(_fifo, out, amount);
+	memset(out + amount, 0, size - amount);
+	return amount;
 }
-
-
 	bool Audio::init(unsigned sample_rate)
 	{
 		_opened = true;
@@ -193,7 +179,6 @@ mal_uint32 Audio::fill_buffer(uint8_t* out, mal_uint32 count) {
 	{
 		_samples = samples;
 		_frames = frames;
-
 		uint32_t in_len = frames * 2;
 		uint32_t out_len = trunc((uint32_t)(in_len * _sampleRate / _coreRate))+1;
 
@@ -215,18 +200,9 @@ mal_uint32 Audio::fill_buffer(uint8_t* out, mal_uint32 count) {
 
 		size_t size = out_len * 2;
 
-	again:
-		size_t avail = fifo_write_avail(_fifo);
-
-		if (size > avail)
-		{
-			Sleep(1);
-			goto again;
-		}
+		while (fifo_write_avail(_fifo) < size)Sleep(1);
 		fifo_write(_fifo, output, size);
 	}
-	//we need to convert to the number of samples
-	//SDL expects the number of bytes.....
 
 
 
@@ -453,8 +429,6 @@ bool core_load(TCHAR *sofile) {
 }
 
 static void noop() { 
-int i = 20;
-i++;
 }
 
 
@@ -571,18 +545,10 @@ bool CLibretro::loadfile(char* filename)
 	_audio->init(sampleRate);
 	if (info.data)
 	free((void*)info.data);
-
-
-	framecount = 0;
-	rateticks = 1000 / av.timing.fps;
-	baseticks = milliseconds_now();
-	baseticks_base = baseticks;
-	lastticks = baseticks;
-	rate = av.timing.fps;
 	isEmulating = true;
 	listDeltaMA.clear();
-	target_fps = av.timing.fps;
-	target_samplerate = 44100;
+	frame_count = 0;
+	fps = 0;
 	return isEmulating;
 }
 
@@ -599,21 +565,69 @@ void CLibretro::splash()
 	}
 }
 
+
+double CLibretro::getDeltaMovingAverage(double delta)
+{
+	listDeltaMA.push_back(delta);
+	double sum = 0;
+	for (std::list<double>::iterator p = listDeltaMA.begin(); p != listDeltaMA.end(); ++p)
+	sum += (double)*p;
+	return sum / listDeltaMA.size();
+}
+
+
+
+bool CLibretro::sync_video_tick(void)
+{
+	static uint64_t fps_time = 0;
+	bool fps_updated = false;
+	uint64_t now = milliseconds_now();
+
+	if (frame_count++ % 120 == 0)
+	{
+		fps = (1000.0 * 120) / (now - fps_time);
+		fps_time = now;
+		fps_updated = true;
+	}
+
+	return fps_updated;
+}
+
+
 void CLibretro::run()
 {
 	if(isEmulating)
 	{
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
-	
 		_samplesCount = 0;
-		do
-		{
-			g_retro.retro_run();
-		} while (_samplesCount == 0);
+		g_retro.retro_run();
+	
+	/*	sync_video_tick();
+		retro_time_t avg = getDeltaMovingAverage(fps);
+		if (listDeltaMA.size() == 2048) {
+			listDeltaMA.clear();
+			int available = fifo_write_avail(_audio->_fifo);
+			int total = SAMPLE_COUNT;
+			int low_water_size = (unsigned)(total * 3 / 4);
+			assert(total != 0);
+			int half = total / 2;
+			int delta_half = available - half;
+			double adjust = 1.0 + 0.005 * ((double)delta_half / half);
+			if (avg < 60 && (available < low_water_size)) {
+				retro_system_av_info av = { 0 };
+				g_retro.retro_get_system_av_info(&av);
+				double sampleRate = av.timing.sample_rate * adjust;
+				//double sampleRate = av.timing.sample_rate * refreshRate / av.timing.fps;
+				_audio->setRate(sampleRate);
+			}
+		}
+		*/
+		if(_samplesCount)_audio->mix(_samples, _samplesCount / 2);
+		
+		
 
-		_audio->mix(_samples, _samplesCount / 2);
-		Sleep(1);
 	}
+	
 }
 bool CLibretro::init(HWND hwnd)
 {
