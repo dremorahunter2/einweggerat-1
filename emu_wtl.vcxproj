@@ -243,6 +243,7 @@
     <ClCompile Include="io\guid_container.cpp" />
     <ClCompile Include="io\input.cpp" />
     <ClCompile Include="libretro-common-master\queues\fifo_queue.c" />
+    <ClCompile Include="libretro-common-master\rthreads\rthreads.c" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>

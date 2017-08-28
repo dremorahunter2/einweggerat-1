@@ -15,12 +15,36 @@ using namespace utf8util;
 #define SAMPLE_COUNT 8192
 #define INLINE 
 
+
+
 static mal_uint32 sdl_audio_callback(mal_device* pDevice, mal_uint32 frameCount, void* pSamples)
 {
 	//convert from samples to the actual number of bytes.
 	int count_bytes = frameCount * pDevice->channels * mal_get_sample_size_in_bytes(mal_format_s16);
 	return ((Audio*)pDevice->pUserData)->fill_buffer((uint8_t*)pSamples, count_bytes)/4;
 	//...and back to samples
+}
+
+static NTSTATUS(__stdcall *NtDelayExecution)(BOOL Alertable, PLARGE_INTEGER DelayInterval) =
+(NTSTATUS(__stdcall*)(BOOL, PLARGE_INTEGER)) GetProcAddress(GetModuleHandle(L"ntdll.dll"), "NtDelayExecution");
+
+static NTSTATUS(__stdcall *ZwSetTimerResolution)(IN ULONG RequestedResolution, IN BOOLEAN Set, OUT PULONG ActualResolution) = 
+(NTSTATUS(__stdcall*)(ULONG, BOOLEAN, PULONG)) GetProcAddress(GetModuleHandle(L"ntdll.dll"), "ZwSetTimerResolution");
+
+
+
+
+static void SleepShort(float milliseconds) {
+	static bool once = true;
+	if (once) {
+		ULONG actualResolution;
+		ZwSetTimerResolution(1, true, &actualResolution);
+		once = false;
+	}
+
+	LARGE_INTEGER interval;
+	interval.QuadPart = -1 * (int)(milliseconds * 10000.0f);
+	NtDelayExecution(false, &interval);
 }
 
 mal_uint32 Audio::fill_buffer(uint8_t* out, mal_uint32 count) {
@@ -111,8 +135,10 @@ mal_uint32 Audio::fill_buffer(uint8_t* out, mal_uint32 count) {
 		}
 
 		size_t size = out_len * 2;
-		while (fifo_write_avail(_fifo) < size)Sleep(1);
+		while (fifo_write_avail(_fifo) < size)SleepShort(0.5);
 		fifo_write(_fifo, output, size);
+	
+
 	}
 
 

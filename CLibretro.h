@@ -7,6 +7,7 @@
 #define MAL_NO_WASAPI
 #include "io/audio/mini_al.h"
 #include "libretro-common-master/include/queues/fifo_queue.h"
+#include "libretro-common-master/include/rthreads/rthreads.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -18,7 +19,8 @@ extern "C" {
 	bool init(unsigned sample_rate);
 	void destroy();
 	void reset();
-	HANDLE ghWriteEvent;
+	slock_t *mutex;
+	scond_t *cond;
 
 	bool setRate(double rate);
 	void mix(const int16_t* samples, size_t frames);
