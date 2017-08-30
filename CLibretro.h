@@ -2,6 +2,10 @@
 #define CEMULATOR_H
 #include <initguid.h>
 #include <list>
+#include <thread>
+#include <chrono>
+#include <mutex>
+#include <condition_variable>
 #define OUTSIDE_SPEEX
 #include "io/audio/speex_resampler.h"
 #define MAL_NO_WASAPI
@@ -19,9 +23,6 @@ extern "C" {
 	bool init(unsigned sample_rate);
 	void destroy();
 	void reset();
-	slock_t *mutex;
-	scond_t *cond;
-
 	bool setRate(double rate);
 	void mix(const int16_t* samples, size_t frames);
 	mal_uint32 fill_buffer(uint8_t* pSamples, mal_uint32 samplecount);
@@ -37,8 +38,8 @@ extern "C" {
 	float          _scale;
 	const int16_t* _samples;
 	size_t         _frames;
-
-
+	std::mutex lock;
+	std::condition_variable buffer_full;
 	};
 
 class CLibretro

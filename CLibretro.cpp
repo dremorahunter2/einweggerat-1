@@ -25,34 +25,13 @@ static mal_uint32 sdl_audio_callback(mal_device* pDevice, mal_uint32 frameCount,
 	//...and back to samples
 }
 
-static NTSTATUS(__stdcall *NtDelayExecution)(BOOL Alertable, PLARGE_INTEGER DelayInterval) =
-(NTSTATUS(__stdcall*)(BOOL, PLARGE_INTEGER)) GetProcAddress(GetModuleHandle(L"ntdll.dll"), "NtDelayExecution");
-
-static NTSTATUS(__stdcall *ZwSetTimerResolution)(IN ULONG RequestedResolution, IN BOOLEAN Set, OUT PULONG ActualResolution) = 
-(NTSTATUS(__stdcall*)(ULONG, BOOLEAN, PULONG)) GetProcAddress(GetModuleHandle(L"ntdll.dll"), "ZwSetTimerResolution");
-
-
-
-
-static void SleepShort(float milliseconds) {
-	static bool once = true;
-	if (once) {
-		ULONG actualResolution;
-		ZwSetTimerResolution(1, true, &actualResolution);
-		once = false;
-	}
-
-	LARGE_INTEGER interval;
-	interval.QuadPart = -1 * (int)(milliseconds * 10000.0f);
-	NtDelayExecution(false, &interval);
-}
-
 mal_uint32 Audio::fill_buffer(uint8_t* out, mal_uint32 count) {
 	size_t size = count;
 	size_t amount = fifo_read_avail(_fifo);
 	amount = size > amount ? amount : size;
 	fifo_read(_fifo, out, amount);
 	memset(out + amount, 0, size - amount);
+	buffer_full.notify_one();
 	return amount;
 }
 	bool Audio::init(unsigned sample_rate)
@@ -67,17 +46,20 @@ mal_uint32 Audio::fill_buffer(uint8_t* out, mal_uint32 count) {
 		setRate(sample_rate);
 		if (mal_context_init(NULL, 0, &context) != MAL_SUCCESS) {
 			printf("Failed to initialize context.");
-			return -3;
+			MessageBox(NULL, L"shit1", L"shit2", MB_ICONSTOP);
+			return false;
+		
 		}
-
 		config = mal_device_config_init_playback(mal_format_s16, 2,_sampleRate, ::sdl_audio_callback);
 		config.bufferSizeInFrames = 1024;
 		_fifo = fifo_new(SAMPLE_COUNT);
 		if (mal_device_init(&context, mal_device_type_playback, NULL, &config, this, &device) != MAL_SUCCESS) {
 			mal_context_uninit(&context);
-			return -4;
+			MessageBox(NULL, L"shit2", L"shit3", MB_ICONSTOP);
+			return false;
 		}
 		mal_device_start(&device);
+		return true;
 	}
 	void Audio::destroy()
 	{
@@ -133,12 +115,11 @@ mal_uint32 Audio::fill_buffer(uint8_t* out, mal_uint32 count) {
 		{
 			memcpy(output, samples, out_len * 2);
 		}
-
-		size_t size = out_len * 2;
-		while (fifo_write_avail(_fifo) < size)SleepShort(0.5);
+		int size = out_len * 2;
+		std::unique_lock<std::mutex> l(lock);
+		buffer_full.wait(l, [this,size]() {return  fifo_write_avail(_fifo) >=size; });
+		//while (fifo_write_avail(_fifo) < size)std::this_thread::sleep_for(16us);
 		fifo_write(_fifo, output, size);
-	
-
 	}
 
 
@@ -423,8 +404,8 @@ bool CLibretro::loadfile(char* filename)
 	struct retro_game_info info = { filename, 0 };
 
 	g_video = { 0 };
-	g_video.hw.version_major = 4;
-	g_video.hw.version_minor = 5;
+	g_video.hw.version_major = 3;
+	g_video.hw.version_minor = 3;
 	g_video.hw.context_type = RETRO_HW_CONTEXT_OPENGL_CORE;
 	g_video.hw.context_reset = noop;
 	g_video.hw.context_destroy = noop;
@@ -537,7 +518,11 @@ void CLibretro::run()
 	{
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 		_samplesCount = 0;
-		g_retro.retro_run();
+		while (!_samplesCount)
+		{
+			g_retro.retro_run();
+		}
+	
 	
 	/*	sync_video_tick();
 		retro_time_t avg = getDeltaMovingAverage(fps);
@@ -559,7 +544,7 @@ void CLibretro::run()
 			}
 		}
 		*/
-		if(_samplesCount)_audio->mix(_samples, _samplesCount / 2);
+		_audio->mix(_samples, _samplesCount / 2);
 		
 		
 
