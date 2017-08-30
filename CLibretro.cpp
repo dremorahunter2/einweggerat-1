@@ -26,6 +26,7 @@ static mal_uint32 sdl_audio_callback(mal_device* pDevice, mal_uint32 frameCount,
 }
 
 mal_uint32 Audio::fill_buffer(uint8_t* out, mal_uint32 count) {
+
 	size_t size = count;
 	size_t amount = fifo_read_avail(_fifo);
 	amount = size > amount ? amount : size;
