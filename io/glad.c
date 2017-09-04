@@ -23,7 +23,7 @@
 #include <string.h>
 #include "glad.h"
 
-static void* get_proc(const char *namez);
+void* get_proc(const char *namez);
 
 #ifdef _WIN32
 #include <windows.h>
@@ -99,8 +99,6 @@ void close_gl() {
     }
 }
 #endif
-
-static
 void* get_proc(const char *namez) {
     void* result = NULL;
     if(libGL == NULL) return NULL;
@@ -126,7 +124,6 @@ int gladLoadGL(void) {
 
     if(open_gl()) {
         status = gladLoadGLLoader(&get_proc);
-        close_gl();
     }
 
     return status;

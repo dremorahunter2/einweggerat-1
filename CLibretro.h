@@ -39,6 +39,7 @@ extern "C" {
 	const int16_t* _samples;
 	size_t         _frames;
 	std::mutex lock;
+	bool buf_ready;
 	std::condition_variable buffer_full;
 	};
 

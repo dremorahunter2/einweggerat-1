@@ -329,7 +329,7 @@ void video_configure(const struct retro_game_geometry *geom, HWND hwnd) {
 
 	refresh_vertex_data();
 
-	g_video.hw.context_reset();
+	if(g_video.hw.context_reset)g_video.hw.context_reset();
 }
 
 

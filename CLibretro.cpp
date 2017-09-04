@@ -7,6 +7,8 @@
 #include "libretro.h"
 #include "io/gl_render.h"
 #include "gui/utf8conv.h"
+#define INI_IMPLEMENTATION
+#include "ini.h"
 
 
 using namespace std;
@@ -26,14 +28,17 @@ static mal_uint32 sdl_audio_callback(mal_device* pDevice, mal_uint32 frameCount,
 }
 
 mal_uint32 Audio::fill_buffer(uint8_t* out, mal_uint32 count) {
-
-	size_t size = count;
-	size_t amount = fifo_read_avail(_fifo);
-	amount = size > amount ? amount : size;
-	fifo_read(_fifo, out, amount);
-	memset(out + amount, 0, size - amount);
-	buffer_full.notify_one();
-	return amount;
+	std::unique_lock<std::mutex> lck(lock);
+	size_t avail = fifo_read_avail(_fifo);
+	if (avail)
+	{
+		avail = count > avail ? avail : count;
+		fifo_read(_fifo, out, avail);
+		memset(out + avail, 0, count - avail);
+		buffer_full.notify_one();
+		return avail;
+	}
+	return 0;
 }
 	bool Audio::init(unsigned sample_rate)
 	{
@@ -47,16 +52,13 @@ mal_uint32 Audio::fill_buffer(uint8_t* out, mal_uint32 count) {
 		setRate(sample_rate);
 		if (mal_context_init(NULL, 0, &context) != MAL_SUCCESS) {
 			printf("Failed to initialize context.");
-			MessageBox(NULL, L"shit1", L"shit2", MB_ICONSTOP);
 			return false;
-		
 		}
 		config = mal_device_config_init_playback(mal_format_s16, 2,_sampleRate, ::sdl_audio_callback);
 		config.bufferSizeInFrames = 1024;
 		_fifo = fifo_new(SAMPLE_COUNT);
 		if (mal_device_init(&context, mal_device_type_playback, NULL, &config, this, &device) != MAL_SUCCESS) {
 			mal_context_uninit(&context);
-			MessageBox(NULL, L"shit2", L"shit3", MB_ICONSTOP);
 			return false;
 		}
 		mal_device_start(&device);
@@ -96,7 +98,7 @@ mal_uint32 Audio::fill_buffer(uint8_t* out, mal_uint32 count) {
 	}
 	void Audio::mix(const int16_t* samples, size_t frames)
 	{
-		_samples = samples;
+		//_samples = samples;
 		_frames = frames;
 		uint32_t in_len = frames * 2;
 		uint32_t out_len = trunc((uint32_t)(in_len * _sampleRate / _coreRate))+1;
@@ -116,10 +118,11 @@ mal_uint32 Audio::fill_buffer(uint8_t* out, mal_uint32 count) {
 		{
 			memcpy(output, samples, out_len * 2);
 		}
+		
 		int size = out_len * 2;
 		std::unique_lock<std::mutex> l(lock);
 		buffer_full.wait(l, [this,size]() {return  fifo_write_avail(_fifo) >=size; });
-		//while (fifo_write_avail(_fifo) < size)std::this_thread::sleep_for(16us);
+	//	while (fifo_write_avail(_fifo) < size)Sleep(1);
 		fifo_write(_fifo, output, size);
 	}
 
@@ -193,6 +196,84 @@ void GetThisPath(TCHAR* dest, size_t destSize)
 	dwRet = GetCurrentDirectory(512, dest);
 }
 
+void init_coresettings(retro_variable *var)
+{
+	TCHAR buffer[MAX_PATH] = { 0 };
+	GetModuleFileName(g_retro.handle, buffer, MAX_PATH);
+	PathRemoveExtension(buffer);
+	lstrcat(buffer, _T(".ini"));
+	FILE *fp = NULL;
+	fp = _wfopen(buffer, L"r");
+	if (!fp)
+	{
+		//create a new file with defaults
+		ini_t* ini = ini_create(NULL);
+		while (var->key && var->value)
+		{
+			char * pch = strstr((char*)var->value, (char*)"; ");
+			pch += strlen("; ");
+			int vars = 0;
+
+			while (pch != NULL)
+			{
+				char val[255] = { 0 };
+				char* str2 = strstr(pch, (char*)"|");
+				if (!str2)
+				{
+					strcpy(val, pch);
+					break;
+				}
+				strncpy(val, pch, str2 - pch);
+				if (!vars) {
+					ini_property_add(ini, INI_GLOBAL_SECTION, var->key, strlen(var->key), val, strlen(val));
+					char val_comment[255] = { 0 };
+					strcpy(val_comment, var->key);
+					strcat(val_comment, ".usedvars");
+					ini_property_add(ini, INI_GLOBAL_SECTION, val_comment, strlen(val_comment), pch, strlen(pch));
+				}
+				pch += str2 - pch++;
+				vars++;
+			}
+			++var;
+		}
+		int size = ini_save(ini, NULL, 0); // Find the size needed
+		char* data = (char*)malloc(size);
+		size = ini_save(ini, data, size); // Actually save the file
+		ini_destroy(ini);
+
+		fp = _wfopen(buffer, L"w");
+		fwrite(data, 1, size, fp);
+		fclose(fp);
+		free(data);
+	}
+	else
+	{
+		fclose(fp);
+	}
+}
+void load_coresettings(retro_variable *var)
+{
+	TCHAR buffer[MAX_PATH] = { 0 };
+	GetModuleFileName(g_retro.handle, buffer, MAX_PATH);
+	PathRemoveExtension(buffer);
+	lstrcat(buffer, _T(".ini"));
+	FILE *fp = NULL;
+	fp = _wfopen(buffer, L"r");
+	fseek(fp, 0, SEEK_END);
+	int size = ftell(fp);
+	fseek(fp, 0, SEEK_SET);
+	char* data = (char*)malloc(size + 1);
+	fread(data, 1, size, fp);
+	data[size] = '\0';
+	fclose(fp);
+	ini_t* ini = ini_load(data,NULL);
+	free(data);
+	int second_index = ini_find_property(ini, INI_GLOBAL_SECTION, (char*)var->key,strlen(var->key));
+	var->value = ini_property_value(ini, INI_GLOBAL_SECTION, second_index);
+	ini_destroy(ini);
+}
+
+
 bool core_environment(unsigned cmd, void *data) {
 	bool *bval;
 	char *sys_path = "system";
@@ -216,19 +297,18 @@ bool core_environment(unsigned cmd, void *data) {
 	}
 	break;
 
+	case RETRO_ENVIRONMENT_SET_VARIABLES:
+	{
+		struct retro_variable *var = (struct retro_variable *)data;
+		init_coresettings(var);
+		return true;
+	}
+	break;
 	case RETRO_ENVIRONMENT_GET_VARIABLE:
 	{
-		{
-			struct retro_variable * variable = (struct retro_variable*)data;
-			if (!strncmp(variable->key, "mupen64plus-aspect", strlen("mupen64plus-aspect")))
-			{
-				variable->value = "4:3";
-			}
-			if (!strncmp(variable->key, "mupen64plus-43screensize", strlen("mupen64plus-43screensize")))
-			{
-					variable->value = "640x480";
-			}
-		}
+		struct retro_variable * variable = (struct retro_variable*)data;
+		load_coresettings(variable);
+		return true;
 	}
 	break;
 	case RETRO_ENVIRONMENT_SET_PIXEL_FORMAT: {
@@ -241,7 +321,7 @@ bool core_environment(unsigned cmd, void *data) {
 		struct retro_hw_render_callback *hw = (struct retro_hw_render_callback*)data;
 		if (hw->context_type == RETRO_HW_CONTEXT_VULKAN)return false;
 		hw->get_current_framebuffer = core_get_current_framebuffer;
-		hw->get_proc_address = (retro_hw_get_proc_address_t)wglGetProcAddress;
+		hw->get_proc_address = (retro_hw_get_proc_address_t)get_proc;
 		g_video.hw = *hw;
 		return true;
 	}
@@ -408,15 +488,15 @@ bool CLibretro::loadfile(char* filename)
 	g_video.hw.version_major = 3;
 	g_video.hw.version_minor = 3;
 	g_video.hw.context_type = RETRO_HW_CONTEXT_OPENGL_CORE;
-	g_video.hw.context_reset = noop;
-	g_video.hw.context_destroy = noop;
+	g_video.hw.context_reset = NULL;
+	g_video.hw.context_destroy = NULL;
 
 	AllocConsole();
 	AttachConsole(GetCurrentProcessId());
 	freopen("CON", "w", stdout);
-	core_load(L"snes9x_libretro.dll");
+	core_load(_T("cores/parallel_n64_libretro.dll"));
 
-	FILE *Input = fopen("smw.sfc", "rb");
+	FILE *Input = fopen("zelda.z64", "rb");
 	if (!Input) return(NULL);
 	// Get the filesize
 	fseek(Input, 0, SEEK_END);
@@ -460,7 +540,6 @@ bool CLibretro::loadfile(char* filename)
 		orig_ratio = (double)lpDevMode.dmDisplayFrequency / av.timing.fps;
 	}
 	double sampleRate = av.timing.sample_rate * orig_ratio;
-	//double sampleRate = av.timing.sample_rate;
 	_audio->init(sampleRate);
 	if (info.data)
 	free((void*)info.data);
@@ -487,6 +566,7 @@ void CLibretro::splash()
 
 double CLibretro::getDeltaMovingAverage(double delta)
 {
+	if (listDeltaMA.size() == 2048)listDeltaMA.clear();
 	listDeltaMA.push_back(delta);
 	double sum = 0;
 	for (std::list<double>::iterator p = listDeltaMA.begin(); p != listDeltaMA.end(); ++p)
@@ -502,9 +582,9 @@ bool CLibretro::sync_video_tick(void)
 	bool fps_updated = false;
 	uint64_t now = milliseconds_now();
 
-	if (frame_count++ % 120 == 0)
+//	if (frame_count++ % 120 == 0)
 	{
-		fps = (1000.0 * 120) / (now - fps_time);
+		fps = (1000.0) / (now - fps_time);
 		fps_time = now;
 		fps_updated = true;
 	}
@@ -525,26 +605,24 @@ void CLibretro::run()
 		}
 	
 	
-	/*	sync_video_tick();
-		retro_time_t avg = getDeltaMovingAverage(fps);
-		if (listDeltaMA.size() == 2048) {
-			listDeltaMA.clear();
-			int available = fifo_write_avail(_audio->_fifo);
-			int total = SAMPLE_COUNT;
-			int low_water_size = (unsigned)(total * 3 / 4);
-			assert(total != 0);
-			int half = total / 2;
-			int delta_half = available - half;
-			double adjust = 1.0 + 0.005 * ((double)delta_half / half);
-			if (avg < 60 && (available < low_water_size)) {
-				retro_system_av_info av = { 0 };
-				g_retro.retro_get_system_av_info(&av);
-				double sampleRate = av.timing.sample_rate * adjust;
-				//double sampleRate = av.timing.sample_rate * refreshRate / av.timing.fps;
-				_audio->setRate(sampleRate);
-			}
-		}
-		*/
+	//	sync_video_tick();
+	//	retro_time_t avg = getDeltaMovingAverage(fps);
+	
+		/*
+		int available = fifo_write_avail(_audio->_fifo);
+		int total = SAMPLE_COUNT;
+		int low_water_size = (unsigned)(total * 3 / 4);
+		assert(total != 0);
+		int half = total / 2;
+		int delta_half = available - half;
+		double adjust = 1.0 + 0.005 * ((double)delta_half / half);
+		if (avg < 60 && (available < low_water_size)) {
+			retro_system_av_info av = { 0 };
+			g_retro.retro_get_system_av_info(&av);
+			double sampleRate = av.timing.sample_rate * adjust;
+			//double sampleRate = av.timing.sample_rate * refreshRate / av.timing.fps;
+			_audio->setRate(sampleRate);
+		}*/
 		_audio->mix(_samples, _samplesCount / 2);
 		
 		
