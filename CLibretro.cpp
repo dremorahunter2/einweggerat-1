@@ -255,7 +255,6 @@ void init_coresettings(retro_variable *var)
 }
 const char* load_coresettings(retro_variable *var)
 {
-	if (!var)return NULL;
 	char variable_val2[50] = { 0 };
 	TCHAR buffer[MAX_PATH] = { 0 };
 	GetModuleFileName(g_retro.handle, buffer, MAX_PATH);
@@ -274,7 +273,11 @@ const char* load_coresettings(retro_variable *var)
 	free(data);
 	int second_index = ini_find_property(ini, INI_GLOBAL_SECTION, (char*)var->key,strlen(var->key));
 	const char* variable_val = ini_property_value(ini, INI_GLOBAL_SECTION, second_index);
-	if (variable_val == NULL)return NULL;
+	if (variable_val == NULL)
+	{
+		ini_destroy(ini);
+		return NULL;
+	}
 	strcpy(variable_val2, variable_val);
 	ini_destroy(ini);
 	return variable_val2;
