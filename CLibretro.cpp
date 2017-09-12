@@ -17,13 +17,12 @@ using namespace utf8util;
 #define SAMPLE_COUNT 8192
 #define INLINE 
 
-
-
 static mal_uint32 sdl_audio_callback(mal_device* pDevice, mal_uint32 frameCount, void* pSamples)
 {
 	//convert from samples to the actual number of bytes.
 	int count_bytes = frameCount * pDevice->channels * mal_get_sample_size_in_bytes(mal_format_s16);
-	return ((Audio*)pDevice->pUserData)->fill_buffer((uint8_t*)pSamples, count_bytes)/4;
+	int ret = ((Audio*)pDevice->pUserData)->fill_buffer((uint8_t*)pSamples, count_bytes) / mal_get_sample_size_in_bytes(mal_format_s16);
+	return ret / pDevice->channels;
 	//...and back to samples
 }
 
@@ -35,10 +34,14 @@ mal_uint32 Audio::fill_buffer(uint8_t* out, mal_uint32 count) {
 		avail = count > avail ? avail : count;
 		fifo_read(_fifo, out, avail);
 		memset(out + avail, 0, count - avail);
-		buffer_full.notify_one();
+		buffer_full.notify_all();
 		return avail;
 	}
-	return 0;
+	else
+	{
+		memset(out, 0, count);
+		return count;
+	}
 }
 	bool Audio::init(unsigned sample_rate)
 	{
@@ -121,8 +124,7 @@ mal_uint32 Audio::fill_buffer(uint8_t* out, mal_uint32 count) {
 		
 		int size = out_len * 2;
 		std::unique_lock<std::mutex> l(lock);
-		buffer_full.wait(l, [this,size]() {return  fifo_write_avail(_fifo) >=size; });
-	//	while (fifo_write_avail(_fifo) < size)Sleep(1);
+		buffer_full.wait(l, [this, size]() {return size < fifo_write_avail(_fifo); });
 		fifo_write(_fifo, output, size);
 	}
 
@@ -251,8 +253,10 @@ void init_coresettings(retro_variable *var)
 		fclose(fp);
 	}
 }
-void load_coresettings(retro_variable *var)
+const char* load_coresettings(retro_variable *var)
 {
+	if (!var)return NULL;
+	char variable_val2[50] = { 0 };
 	TCHAR buffer[MAX_PATH] = { 0 };
 	GetModuleFileName(g_retro.handle, buffer, MAX_PATH);
 	PathRemoveExtension(buffer);
@@ -269,8 +273,11 @@ void load_coresettings(retro_variable *var)
 	ini_t* ini = ini_load(data,NULL);
 	free(data);
 	int second_index = ini_find_property(ini, INI_GLOBAL_SECTION, (char*)var->key,strlen(var->key));
-	var->value = ini_property_value(ini, INI_GLOBAL_SECTION, second_index);
+	const char* variable_val = ini_property_value(ini, INI_GLOBAL_SECTION, second_index);
+	if (variable_val == NULL)return NULL;
+	strcpy(variable_val2, variable_val);
 	ini_destroy(ini);
+	return variable_val2;
 }
 
 
@@ -307,7 +314,7 @@ bool core_environment(unsigned cmd, void *data) {
 	case RETRO_ENVIRONMENT_GET_VARIABLE:
 	{
 		struct retro_variable * variable = (struct retro_variable*)data;
-		load_coresettings(variable);
+		variable->value = load_coresettings(variable);
 		return true;
 	}
 	break;
@@ -482,8 +489,7 @@ bool CLibretro::loadfile(char* filename)
 {
 	retro_system_av_info av = { 0 };
 	struct retro_system_info system = {0};
-	struct retro_game_info info = { filename, 0 };
-
+	
 	g_video = { 0 };
 	g_video.hw.version_major = 3;
 	g_video.hw.version_minor = 3;
@@ -494,9 +500,16 @@ bool CLibretro::loadfile(char* filename)
 	AllocConsole();
 	AttachConsole(GetCurrentProcessId());
 	freopen("CON", "w", stdout);
+	
+	
+	
 	core_load(_T("cores/parallel_n64_libretro.dll"));
-
-	FILE *Input = fopen("zelda.z64", "rb");
+	filename = "zelda.z64";
+	//filename = "sm64.z64";
+	//core_load(_T("cores/bsnes_mercury_performance_libretro.dll"));
+	//filename = "smw.sfc";
+	struct retro_game_info info = { filename, 0 };
+	FILE *Input = fopen(filename, "rb");
 	if (!Input) return(NULL);
 	// Get the filesize
 	fseek(Input, 0, SEEK_END);
@@ -524,7 +537,8 @@ bool CLibretro::loadfile(char* filename)
 	g_retro.retro_get_system_av_info(&av);
 	::video_configure(&av.geometry,emulator_hwnd);
 	_samples = (int16_t*)malloc(SAMPLE_COUNT);
-	_audio = new Audio();
+	memset(_samples, 0, SAMPLE_COUNT);
+	
 	double orig_ratio = 0;
 
 	DEVMODE lpDevMode;
@@ -540,6 +554,7 @@ bool CLibretro::loadfile(char* filename)
 		orig_ratio = (double)lpDevMode.dmDisplayFrequency / av.timing.fps;
 	}
 	double sampleRate = av.timing.sample_rate * orig_ratio;
+	_audio = new Audio();
 	_audio->init(sampleRate);
 	if (info.data)
 	free((void*)info.data);
@@ -624,6 +639,7 @@ void CLibretro::run()
 			_audio->setRate(sampleRate);
 		}*/
 		_audio->mix(_samples, _samplesCount / 2);
+		
 		
 		
 

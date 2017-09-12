@@ -2,6 +2,7 @@
 /Release/
 /exe/
 /out/
+/out_x86/
 /.vs/
 /ipch/
 UpgradeLog.htm
