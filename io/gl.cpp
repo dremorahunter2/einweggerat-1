@@ -23,7 +23,6 @@ static const PIXELFORMATDESCRIPTOR pfd =
 
 static struct {
 	GLuint vao;
-	GLuint vbo;
 	GLuint program;
 	GLint i_pos;
 	GLint i_coord;
@@ -36,13 +35,11 @@ static bool g_win = false;
 
 static const char *g_vshader_src =
 "#version 330\n"
-"in vec2 i_pos;\n"
-"in vec2 i_coord;\n"
 "out vec2 o_coord;\n"
 "uniform mat4 u_mvp;\n"
 "void main() {\n"
-"o_coord = i_coord;\n"
-"gl_Position = vec4(i_pos, 0.0, 1.0) * u_mvp;\n"
+"o_coord = vec2((gl_VertexID << 1) & 2, gl_VertexID & 2); \n"
+"gl_Position = vec4(o_coord * vec2(2.0, -2.0) + vec2(-1.0, 1.0), 0.0, 1.0)* u_mvp;\n"
 "}";
 
 static const char *g_fshader_src =
@@ -52,9 +49,6 @@ static const char *g_fshader_src =
 "void main() {\n"
 "gl_FragColor = texture2D(u_tex, o_coord);\n"
 "}";
-
-
-
 
 void ortho2d(float m[4][4], float left, float right, float bottom, float top) {
 	m[0][0] = 1; m[0][1] = 0; m[0][2] = 0; m[0][3] = 0;
@@ -68,6 +62,7 @@ void ortho2d(float m[4][4], float left, float right, float bottom, float top) {
 	m[3][0] = -(right + left) / (right - left);
 	m[3][1] = -(top + bottom) / (top - bottom);
 }
+
 GLuint compile_shader(unsigned type, unsigned count, const char **strings) {
 	GLuint shader = glCreateShader(type);
 	glShaderSource(shader, count, strings, NULL);
@@ -129,34 +124,6 @@ void init_shaders() {
 	glUniformMatrix4fv(g_shader.u_mvp, 1, GL_FALSE, (float*)m);
 
 	glUseProgram(0);
-}
-
-
-void refresh_vertex_data() {
-
-	float bottom = (float)g_video.clip_h / g_video.tex_h;
-	float right = (float)g_video.clip_w / g_video.tex_w;
-
-	float vertex_data[] = {
-		// pos, coord
-		-1.0f, -1.0f, 0.0f, bottom, // left-bottom
-		-1.0f, 1.0f, 0.0f, 0.0f,   // left-top
-		1.0f, -1.0f, right, bottom,// right-bottom
-		1.0f, 1.0f, right, 0.0f,  // right-top
-	};
-
-	glBindVertexArray(g_shader.vao);
-
-	glBindBuffer(GL_ARRAY_BUFFER, g_shader.vbo);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(vertex_data), vertex_data, GL_STREAM_DRAW);
-
-	glEnableVertexAttribArray(g_shader.i_pos);
-	glEnableVertexAttribArray(g_shader.i_coord);
-	glVertexAttribPointer(g_shader.i_pos, 2, GL_FLOAT, GL_FALSE, sizeof(float) * 4, 0);
-	glVertexAttribPointer(g_shader.i_coord, 2, GL_FLOAT, GL_FALSE, sizeof(float) * 4, (void*)(2 * sizeof(float)));
-
-	glBindVertexArray(0);
-	glBindBuffer(GL_ARRAY_BUFFER, 0);
 }
 
 void init_framebuffer(int width, int height)
@@ -327,8 +294,6 @@ void video_configure(const struct retro_game_geometry *geom, HWND hwnd) {
 	g_video.clip_w = geom->base_width;
 	g_video.clip_h = geom->base_height;
 
-	refresh_vertex_data();
-
 	if(g_video.hw.context_reset)g_video.hw.context_reset();
 }
 
@@ -363,8 +328,6 @@ void video_refresh(const void *data, unsigned width, unsigned height, unsigned p
 	{
 		g_video.clip_h = height;
 		g_video.clip_w = width;
-
-		refresh_vertex_data();
 	}
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	glBindTexture(GL_TEXTURE_2D, g_video.tex_id);
@@ -383,12 +346,9 @@ void video_refresh(const void *data, unsigned width, unsigned height, unsigned p
 	RECT clientRect;
 
 	GetClientRect(g_video.hwnd, &clientRect);
-	w = clientRect.right;
-	h = clientRect.bottom;
 
-
-	int32_t vp_width = w;
-	int32_t vp_height = h;
+	int32_t vp_width = clientRect.right;
+	int32_t vp_height = clientRect.bottom;
 
 	// default to bottom left corner of the window above the status bar
 	int32_t vp_x = 0;
@@ -412,9 +372,6 @@ void video_refresh(const void *data, unsigned width, unsigned height, unsigned p
 
 	// configure viewport
 	glViewport(vp_x, vp_y, vp_width, vp_height);
-
-
-	//glViewport(0, 0, w, h);
 
 	glClear(GL_COLOR_BUFFER_BIT);
 
@@ -454,8 +411,7 @@ static void video_deinit() {
 	}
 		
 	glDisableVertexAttribArray(1);
-	glDeleteBuffers(1, &g_shader.vbo);
-	glDeleteVertexArrays(1, &g_shader.vbo);
+	glDeleteVertexArrays(1, &g_shader.vao);
 
 	if (g_video.hRC)
 	{
