@@ -366,7 +366,6 @@ void video_refresh(const void *data, unsigned width, unsigned height, unsigned p
 
 		refresh_vertex_data();
 	}
-
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	glBindTexture(GL_TEXTURE_2D, g_video.tex_id);
 
@@ -386,7 +385,36 @@ void video_refresh(const void *data, unsigned width, unsigned height, unsigned p
 	GetClientRect(g_video.hwnd, &clientRect);
 	w = clientRect.right;
 	h = clientRect.bottom;
-	glViewport(0, 0, w, h);
+
+
+	int32_t vp_width = w;
+	int32_t vp_height = h;
+
+	// default to bottom left corner of the window above the status bar
+	int32_t vp_x = 0;
+	int32_t vp_y = 0;
+
+	int32_t hw = g_video.clip_h * vp_width;
+	int32_t wh = g_video.clip_w * vp_height;
+
+	// add letterboxes or pillarboxes if the window has a different aspect ratio
+	// than the current display mode
+	if (hw > wh) {
+		int32_t w_max = wh / g_video.clip_h;
+		vp_x += (vp_width - w_max) / 2;
+		vp_width = w_max;
+	}
+	else if (hw < wh) {
+		int32_t h_max = hw / g_video.clip_w;
+		vp_y += (vp_height - h_max) / 2;
+		vp_height = h_max;
+	}
+
+	// configure viewport
+	glViewport(vp_x, vp_y, vp_width, vp_height);
+
+
+	//glViewport(0, 0, w, h);
 
 	glClear(GL_COLOR_BUFFER_BIT);
 
