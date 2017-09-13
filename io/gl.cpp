@@ -109,7 +109,6 @@ void init_shaders() {
 	g_shader.u_mvp = glGetUniformLocation(program, "u_mvp");
 
 	glGenVertexArrays(1, &g_shader.vao);
-	glGenBuffers(1, &g_shader.vbo);
 
 	glUseProgram(g_shader.program);
 
