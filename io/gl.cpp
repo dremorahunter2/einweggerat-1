@@ -24,8 +24,6 @@ static const PIXELFORMATDESCRIPTOR pfd =
 static struct {
 	GLuint vao;
 	GLuint program;
-	GLint i_pos;
-	GLint i_coord;
 	GLint u_tex;
 	GLint u_mvp;
 } g_shader = { 0 };
@@ -103,8 +101,6 @@ void init_shaders() {
 	}
 
 	g_shader.program = program;
-	g_shader.i_pos = glGetAttribLocation(program, "i_pos");
-	g_shader.i_coord = glGetAttribLocation(program, "i_coord");
 	g_shader.u_tex = glGetUniformLocation(program, "u_tex");
 	g_shader.u_mvp = glGetUniformLocation(program, "u_mvp");
 
@@ -168,7 +164,29 @@ void init_framebuffer(int width, int height)
 
 
  void resize_cb(int w, int h) {
-	glViewport(0, 0, w, h);
+	 int32_t vp_width = w;
+	 int32_t vp_height = h;
+	 // default to bottom left corner of the window above the status bar
+	 int32_t vp_x = 0;
+	 int32_t vp_y = 0;
+
+	 int32_t hw = g_video.clip_h * vp_width;
+	 int32_t wh = g_video.clip_w * vp_height;
+
+	 // add letterboxes or pillarboxes if the window has a different aspect ratio
+	 // than the current display mode
+	 if (hw > wh) {
+		 int32_t w_max = wh / g_video.clip_h;
+		 vp_x += (vp_width - w_max) / 2;
+		 vp_width = w_max;
+	 }
+	 else if (hw < wh) {
+		 int32_t h_max = hw / g_video.clip_w;
+		 vp_y += (vp_height - h_max) / 2;
+		 vp_height = h_max;
+	 }
+	 // configure viewport
+	 glViewport(vp_x, vp_y, vp_width, vp_height);
 }
 
 void create_window(int width, int height, HWND hwnd) {
@@ -341,36 +359,9 @@ void video_refresh(const void *data, unsigned width, unsigned height, unsigned p
 			g_video.pixtype, g_video.pixfmt, data);
 	}
 
-	int w = 0, h = 0;
 	RECT clientRect;
-
 	GetClientRect(g_video.hwnd, &clientRect);
-
-	int32_t vp_width = clientRect.right;
-	int32_t vp_height = clientRect.bottom;
-
-	// default to bottom left corner of the window above the status bar
-	int32_t vp_x = 0;
-	int32_t vp_y = 0;
-
-	int32_t hw = g_video.clip_h * vp_width;
-	int32_t wh = g_video.clip_w * vp_height;
-
-	// add letterboxes or pillarboxes if the window has a different aspect ratio
-	// than the current display mode
-	if (hw > wh) {
-		int32_t w_max = wh / g_video.clip_h;
-		vp_x += (vp_width - w_max) / 2;
-		vp_width = w_max;
-	}
-	else if (hw < wh) {
-		int32_t h_max = hw / g_video.clip_w;
-		vp_y += (vp_height - h_max) / 2;
-		vp_height = h_max;
-	}
-
-	// configure viewport
-	glViewport(vp_x, vp_y, vp_width, vp_height);
+	resize_cb(clientRect.right, clientRect.bottom);
 
 	glClear(GL_COLOR_BUFFER_BIT);
 
@@ -381,7 +372,7 @@ void video_refresh(const void *data, unsigned width, unsigned height, unsigned p
 
 
 	glBindVertexArray(g_shader.vao);
-	glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+	glDrawArrays(GL_TRIANGLES, 0, 3);
 	glBindVertexArray(0);
 
 	glUseProgram(0);
