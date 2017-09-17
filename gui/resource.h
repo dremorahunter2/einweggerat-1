@@ -4,11 +4,10 @@
 //
 #define IDD_ABOUT                       104
 #define IDD_SETTINGS                    112
+#define IDD_PATHS                       112
 #define IDD_INPUT                       113
-#define IDD_PATHS                       113
 #define IDD_DIALOG1                     114
 #define IDD_VIDEO                       114
-#define IDD_GENERALSETTINGS             114
 #define IDD_INPUT1                      115
 #define MENU_MAINFRAME                  128
 #define IDR_MAINFRAME                   129
@@ -85,13 +84,17 @@
 #define ID_CONFIGUREPLUGINS_AUDIO       40029
 #define ID_CONFIGUREPLUGINS_INPUT       40030
 #define ID_CONFIGUREPLUGINS_GRAPHICS    40031
+#define ID_PREFERENCES_COREVARIABLES    40032
+#define ID_PREFERENCES_PATHS            40033
+#define ID_PREFERENCES_INPUTCONFIG      40034
+#define ID_OPTIONS_COREOPTIONS          40035
 
 // Next default values for new objects
 // 
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NEXT_RESOURCE_VALUE        135
-#define _APS_NEXT_COMMAND_VALUE         40032
+#define _APS_NEXT_COMMAND_VALUE         40036
 #define _APS_NEXT_CONTROL_VALUE         1191
 #define _APS_NEXT_SYMED_VALUE           101
 #endif
