@@ -2,6 +2,7 @@
 #define _gl_render_h_
 
 #include "glad.h"
+void video_deinit();
 bool video_set_pixel_format(unsigned format);
 void video_refresh(const void *data, unsigned width, unsigned height, unsigned pitch);
 void video_configure(const struct retro_game_geometry *geom, HWND hwnd);

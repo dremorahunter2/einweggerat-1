@@ -17,7 +17,6 @@ int Run(LPTSTR /*lpstrCmdLine*/ = NULL, int nCmdShow = SW_SHOWDEFAULT)
 	// Show the window
 	LONG style = dlgMain.GetWindowLong(GWL_STYLE);
 	style &= ~WS_POPUP;
-	style &= ~WS_MAXIMIZEBOX;
 	dlgMain.SetWindowLong(GWL_STYLE,style);
 	dlgMain.SetWindowPos(0,100,100,640,480,SWP_NOZORDER);
 	dlgMain.CenterWindow();

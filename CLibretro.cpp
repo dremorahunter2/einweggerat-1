@@ -38,11 +38,7 @@ mal_uint32 Audio::fill_buffer(uint8_t* out, mal_uint32 count) {
 		buffer_full.notify_all();
 		return avail;
 	}
-	else
-	{
-		memset(out, 0, count);
-		return count;
-	}
+	return 0;
 }
 	bool Audio::init(unsigned sample_rate)
 	{
@@ -508,10 +504,10 @@ bool CLibretro::loadfile(char* filename)
 	AttachConsole(GetCurrentProcessId());
 	freopen("CON", "w", stdout);
 	
-	//core_load(_T("cores/parallel_n64_libretro.dll"));
-	//filename = "zelda.z64";
-	core_load(_T("cores/snes9x_libretro.dll"));
-	filename = "smw.sfc";
+	core_load(_T("cores/parallel_n64_libretro.dll"));
+	filename = "zelda.z64";
+//	core_load(_T("cores/snes9x_libretro.dll"));
+//	filename = "smw.sfc";
 	struct retro_game_info info = { filename, 0 };
 	FILE *Input = fopen(filename, "rb");
 	if (!Input) return(NULL);
@@ -587,6 +583,7 @@ DWORD WINAPI CLibretro::libretro_thread(void* Param)
 	g_retro.retro_deinit();
 	This->_audio->destroy();
 	delete[] This->_audio;
+	video_deinit();
 
 	return 0;
 }
@@ -639,6 +636,8 @@ void CLibretro::run()
 	while(isEmulating)
 	{
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+		glClearColor(0, 0, 0, 1);
+		glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
 		_samplesCount = 0;
 		while (!_samplesCount)
 		{

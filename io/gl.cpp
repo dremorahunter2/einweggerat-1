@@ -458,7 +458,7 @@ void video_refresh(const void *data, unsigned width, unsigned height, unsigned p
 	SwapBuffers(g_video.hDC);
 }
 
-static void video_deinit() {
+void video_deinit() {
 	if (g_video.tex_id)
 	{
 		glDeleteTextures(1, &g_video.tex_id);
