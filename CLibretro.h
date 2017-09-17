@@ -46,10 +46,12 @@ extern "C" {
 class CLibretro
 {
 private:
-	HWND emulator_hwnd;
+	
 	static	CLibretro* m_Instance ;
 	
 public:
+	HWND emulator_hwnd;
+	static DWORD WINAPI libretro_thread(void* Param);
 	static CLibretro* CreateInstance(HWND hwnd ) ;
 	static	CLibretro* GetSingleton( ) ;
 	CLibretro();

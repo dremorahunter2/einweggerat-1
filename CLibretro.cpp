@@ -34,6 +34,7 @@ mal_uint32 Audio::fill_buffer(uint8_t* out, mal_uint32 count) {
 		avail = count > avail ? avail : count;
 		fifo_read(_fifo, out, avail);
 		memset(out + avail, 0, count - avail);
+		lck.unlock();
 		buffer_full.notify_all();
 		return avail;
 	}
@@ -70,6 +71,8 @@ mal_uint32 Audio::fill_buffer(uint8_t* out, mal_uint32 count) {
 	void Audio::destroy()
 	{
 		{
+			mal_device_stop(&device);
+			mal_context_uninit(&context);
 			if (_resampler != NULL)
 			{
 				speex_resampler_destroy(_resampler);
@@ -125,6 +128,7 @@ mal_uint32 Audio::fill_buffer(uint8_t* out, mal_uint32 count) {
 		int size = out_len * 2;
 		std::unique_lock<std::mutex> l(lock);
 		buffer_full.wait(l, [this, size]() {return size < fifo_write_avail(_fifo); });
+		
 		fifo_write(_fifo, output, size);
 	}
 
@@ -490,7 +494,7 @@ long long milliseconds_now() {
 
 bool CLibretro::loadfile(char* filename)
 {
-	retro_system_av_info av = { 0 };
+	
 	struct retro_system_info system = {0};
 	
 	g_video = { 0 };
@@ -504,10 +508,10 @@ bool CLibretro::loadfile(char* filename)
 	AttachConsole(GetCurrentProcessId());
 	freopen("CON", "w", stdout);
 	
-	core_load(_T("cores/parallel_n64_libretro.dll"));
-	filename = "zelda.z64";
-	//core_load(_T("cores/bsnes_mercury_performance_libretro.dll"));
-	//filename = "ds.sfc";
+	//core_load(_T("cores/parallel_n64_libretro.dll"));
+	//filename = "zelda.z64";
+	core_load(_T("cores/snes9x_libretro.dll"));
+	filename = "smw.sfc";
 	struct retro_game_info info = { filename, 0 };
 	FILE *Input = fopen(filename, "rb");
 	if (!Input) return(NULL);
@@ -534,11 +538,26 @@ bool CLibretro::loadfile(char* filename)
 	}
 
 	if (!g_retro.retro_load_game(&info)) return false;
-	g_retro.retro_get_system_av_info(&av);
-	::video_configure(&av.geometry,emulator_hwnd);
-	_samples = (int16_t*)malloc(SAMPLE_COUNT);
-	memset(_samples, 0, SAMPLE_COUNT);
+	if (info.data)
+	free((void*)info.data);
+
+	DWORD ThreadID;
+	CreateThread(NULL, 0, libretro_thread, (void*) this, 0, &ThreadID);
 	
+	return isEmulating;
+}
+
+
+DWORD WINAPI CLibretro::libretro_thread(void* Param)
+{
+	CLibretro* This = (CLibretro*)Param;
+	retro_system_av_info av = { 0 };
+	g_retro.retro_get_system_av_info(&av);
+
+	::video_configure(&av.geometry, This->emulator_hwnd);
+	This->_samples = (int16_t*)malloc(SAMPLE_COUNT);
+	memset(This->_samples, 0, SAMPLE_COUNT);
+
 	double orig_ratio = 0;
 
 	DEVMODE lpDevMode;
@@ -554,15 +573,22 @@ bool CLibretro::loadfile(char* filename)
 		orig_ratio = (double)lpDevMode.dmDisplayFrequency / av.timing.fps;
 	}
 	double sampleRate = av.timing.sample_rate * orig_ratio;
-	_audio = new Audio();
-	_audio->init(sampleRate);
-	if (info.data)
-	free((void*)info.data);
-	isEmulating = true;
-	listDeltaMA.clear();
-	frame_count = 0;
-	fps = 0;
-	return isEmulating;
+	This->_audio = new Audio();
+	This->_audio->init(sampleRate);
+
+	This->isEmulating = true;
+	This->listDeltaMA.clear();
+	This->frame_count = 0;
+	This->fps = 0;
+
+	This->run();
+
+	g_retro.retro_unload_game();
+	g_retro.retro_deinit();
+	This->_audio->destroy();
+	delete[] This->_audio;
+
+	return 0;
 }
 
 void CLibretro::splash()
@@ -610,7 +636,7 @@ bool CLibretro::sync_video_tick(void)
 
 void CLibretro::run()
 {
-	if(isEmulating)
+	while(isEmulating)
 	{
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 		_samplesCount = 0;
@@ -644,6 +670,7 @@ void CLibretro::run()
 		
 
 	}
+	int i = 0;
 	
 }
 bool CLibretro::init(HWND hwnd)

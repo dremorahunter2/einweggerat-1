@@ -23,7 +23,10 @@ static const PIXELFORMATDESCRIPTOR pfd =
 
 static struct {
 	GLuint vao;
+	GLuint vbo;
 	GLuint program;
+	GLint i_pos;
+	GLint i_coord;
 	GLint u_tex;
 	GLint u_mvp;
 } g_shader = { 0 };
@@ -33,11 +36,13 @@ static bool g_win = false;
 
 static const char *g_vshader_src =
 "#version 330\n"
+"in vec2 i_pos;\n"
+"in vec2 i_coord;\n"
 "out vec2 o_coord;\n"
 "uniform mat4 u_mvp;\n"
 "void main() {\n"
-"o_coord = vec2((gl_VertexID << 1) & 2, gl_VertexID & 2); \n"
-"gl_Position = vec4(o_coord * vec2(2.0, -2.0) + vec2(-1.0, 1.0), 0.0, 1.0)* u_mvp;\n"
+"o_coord = i_coord;\n"
+"gl_Position = vec4(i_pos, 0.0, 1.0) * u_mvp;\n"
 "}";
 
 static const char *g_fshader_src =
@@ -47,6 +52,9 @@ static const char *g_fshader_src =
 "void main() {\n"
 "gl_FragColor = texture2D(u_tex, o_coord);\n"
 "}";
+
+
+
 
 void ortho2d(float m[4][4], float left, float right, float bottom, float top) {
 	m[0][0] = 1; m[0][1] = 0; m[0][2] = 0; m[0][3] = 0;
@@ -60,7 +68,6 @@ void ortho2d(float m[4][4], float left, float right, float bottom, float top) {
 	m[3][0] = -(right + left) / (right - left);
 	m[3][1] = -(top + bottom) / (top - bottom);
 }
-
 GLuint compile_shader(unsigned type, unsigned count, const char **strings) {
 	GLuint shader = glCreateShader(type);
 	glShaderSource(shader, count, strings, NULL);
@@ -101,10 +108,13 @@ void init_shaders() {
 	}
 
 	g_shader.program = program;
+	g_shader.i_pos = glGetAttribLocation(program, "i_pos");
+	g_shader.i_coord = glGetAttribLocation(program, "i_coord");
 	g_shader.u_tex = glGetUniformLocation(program, "u_tex");
 	g_shader.u_mvp = glGetUniformLocation(program, "u_mvp");
 
 	glGenVertexArrays(1, &g_shader.vao);
+	glGenBuffers(1, &g_shader.vbo);
 
 	glUseProgram(g_shader.program);
 
@@ -121,12 +131,40 @@ void init_shaders() {
 	glUseProgram(0);
 }
 
+
+void refresh_vertex_data() {
+
+	float bottom = (float)g_video.clip_h / g_video.tex_h;
+	float right = (float)g_video.clip_w / g_video.tex_w;
+
+	float vertex_data[] = {
+		// pos, coord
+		-1.0f, -1.0f, 0.0f, bottom, // left-bottom
+		-1.0f, 1.0f, 0.0f, 0.0f,   // left-top
+		1.0f, -1.0f, right, bottom,// right-bottom
+		1.0f, 1.0f, right, 0.0f,  // right-top
+	};
+
+	glBindVertexArray(g_shader.vao);
+
+	glBindBuffer(GL_ARRAY_BUFFER, g_shader.vbo);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(vertex_data), vertex_data, GL_STREAM_DRAW);
+
+	glEnableVertexAttribArray(g_shader.i_pos);
+	glEnableVertexAttribArray(g_shader.i_coord);
+	glVertexAttribPointer(g_shader.i_pos, 2, GL_FLOAT, GL_FALSE, sizeof(float) * 4, 0);
+	glVertexAttribPointer(g_shader.i_coord, 2, GL_FLOAT, GL_FALSE, sizeof(float) * 4, (void*)(2 * sizeof(float)));
+
+	glBindVertexArray(0);
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+}
+
 void init_framebuffer(int width, int height)
 {
 	if (g_video.fbo_id)
-	glDeleteFramebuffers(1, &g_video.fbo_id);
+		glDeleteFramebuffers(1, &g_video.fbo_id);
 	if (g_video.rbo_id)
-	glDeleteRenderbuffers(1, &g_video.rbo_id);
+		glDeleteRenderbuffers(1, &g_video.rbo_id);
 
 
 	glGenFramebuffers(1, &g_video.fbo_id);
@@ -163,34 +201,36 @@ void init_framebuffer(int width, int height)
 }
 
 
- void resize_cb(int w, int h) {
-	 int32_t vp_width = w;
-	 int32_t vp_height = h;
-	 // default to bottom left corner of the window above the status bar
-	 int32_t vp_x = 0;
-	 int32_t vp_y = 0;
+void resize_cb(int w, int h) {
+	int32_t vp_width = w;
+	int32_t vp_height = h;
 
-	 int32_t hw = g_video.clip_h * vp_width;
-	 int32_t wh = g_video.clip_w * vp_height;
+	// default to bottom left corner of the window above the status bar
+	int32_t vp_x = 0;
+	int32_t vp_y = 0;
 
-	 // add letterboxes or pillarboxes if the window has a different aspect ratio
-	 // than the current display mode
-	 if (hw > wh) {
-		 int32_t w_max = wh / g_video.clip_h;
-		 vp_x += (vp_width - w_max) / 2;
-		 vp_width = w_max;
-	 }
-	 else if (hw < wh) {
-		 int32_t h_max = hw / g_video.clip_w;
-		 vp_y += (vp_height - h_max) / 2;
-		 vp_height = h_max;
-	 }
-	 // configure viewport
-	 glViewport(vp_x, vp_y, vp_width, vp_height);
+	int32_t hw = g_video.clip_h * vp_width;
+	int32_t wh = g_video.clip_w * vp_height;
+
+	// add letterboxes or pillarboxes if the window has a different aspect ratio
+	// than the current display mode
+	if (hw > wh) {
+		int32_t w_max = wh / g_video.clip_h;
+		vp_x += (vp_width - w_max) / 2;
+		vp_width = w_max;
+	}
+	else if (hw < wh) {
+		int32_t h_max = hw / g_video.clip_w;
+		vp_y += (vp_height - h_max) / 2;
+		vp_height = h_max;
+	}
+
+	// configure viewport
+	glViewport(vp_x, vp_y, vp_width, vp_height);
 }
 
 void create_window(int width, int height, HWND hwnd) {
-	
+
 	g_video.hwnd = hwnd;
 	g_video.hDC = GetDC(hwnd);
 
@@ -233,7 +273,7 @@ void create_window(int width, int height, HWND hwnd) {
 		if (!(g_video.hRC = wglCreateContext(g_video.hDC)))return;
 		if (!wglMakeCurrent(g_video.hDC, g_video.hRC))return;
 	}
-	
+
 	gladLoadGL();
 	init_shaders();
 	resize_cb(width, height);
@@ -263,11 +303,44 @@ void resize_to_aspect(double ratio, int sw, int sh, int *dw, int *dh) {
 		*dh = *dw / ratio;
 }
 
+BOOL CenterWindow(HWND hwndWindow)
+{
+	HWND hwndParent;
+	RECT rectWindow, rectParent;
+
+	// make the window relative to its parent
+	if ((hwndParent = GetParent(hwndWindow)) != NULL)
+	{
+		GetWindowRect(hwndWindow, &rectWindow);
+		GetWindowRect(hwndParent, &rectParent);
+
+		int nWidth = rectWindow.right - rectWindow.left;
+		int nHeight = rectWindow.bottom - rectWindow.top;
+
+		int nX = ((rectParent.right - rectParent.left) - nWidth) / 2 + rectParent.left;
+		int nY = ((rectParent.bottom - rectParent.top) - nHeight) / 2 + rectParent.top;
+
+		int nScreenWidth = GetSystemMetrics(SM_CXSCREEN);
+		int nScreenHeight = GetSystemMetrics(SM_CYSCREEN);
+
+		// make sure that the dialog box never moves outside of the screen
+		if (nX < 0) nX = 0;
+		if (nY < 0) nY = 0;
+		if (nX + nWidth > nScreenWidth) nX = nScreenWidth - nWidth;
+		if (nY + nHeight > nScreenHeight) nY = nScreenHeight - nHeight;
+
+		MoveWindow(hwndWindow, nX, nY, nWidth, nHeight, FALSE);
+
+		return TRUE;
+	}
+
+	return FALSE;
+}
 
 
 
 void video_configure(const struct retro_game_geometry *geom, HWND hwnd) {
-	int nwidth =0, nheight = 0;
+	int nwidth = 0, nheight = 0;
 
 	resize_to_aspect(geom->aspect_ratio, geom->base_width * 1, geom->base_height * 1, &nwidth, &nheight);
 
@@ -275,7 +348,7 @@ void video_configure(const struct retro_game_geometry *geom, HWND hwnd) {
 	nheight *= g_scale;
 
 	if (!g_win)
-		create_window(nwidth, nheight,hwnd);
+		create_window(nwidth, nheight, hwnd);
 
 	if (g_video.tex_id)
 		glDeleteTextures(1, &g_video.tex_id);
@@ -288,7 +361,7 @@ void video_configure(const struct retro_game_geometry *geom, HWND hwnd) {
 
 	int screenWidth = GetSystemMetrics(SM_CXSCREEN);
 	int screenHeight = GetSystemMetrics(SM_CYSCREEN);
-	MoveWindow(hwnd, 0, 0, nwidth, nheight, true);
+	CenterWindow(hwnd);
 
 	glGenTextures(1, &g_video.tex_id);
 
@@ -311,7 +384,9 @@ void video_configure(const struct retro_game_geometry *geom, HWND hwnd) {
 	g_video.clip_w = geom->base_width;
 	g_video.clip_h = geom->base_height;
 
-	if(g_video.hw.context_reset)g_video.hw.context_reset();
+	refresh_vertex_data();
+
+	if (g_video.hw.context_reset)g_video.hw.context_reset();
 }
 
 
@@ -345,6 +420,8 @@ void video_refresh(const void *data, unsigned width, unsigned height, unsigned p
 	{
 		g_video.clip_h = height;
 		g_video.clip_w = width;
+
+		refresh_vertex_data();
 	}
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	glBindTexture(GL_TEXTURE_2D, g_video.tex_id);
@@ -360,6 +437,7 @@ void video_refresh(const void *data, unsigned width, unsigned height, unsigned p
 	}
 
 	RECT clientRect;
+
 	GetClientRect(g_video.hwnd, &clientRect);
 	resize_cb(clientRect.right, clientRect.bottom);
 
@@ -372,7 +450,7 @@ void video_refresh(const void *data, unsigned width, unsigned height, unsigned p
 
 
 	glBindVertexArray(g_shader.vao);
-	glDrawArrays(GL_TRIANGLES, 0, 3);
+	glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 	glBindVertexArray(0);
 
 	glUseProgram(0);
@@ -392,16 +470,17 @@ static void video_deinit() {
 		glDeleteFramebuffers(1, &g_video.fbo_id);
 		g_video.fbo_id = 0;
 	}
-		
+
 
 	if (g_video.rbo_id)
 	{
 		glDeleteRenderbuffers(1, &g_video.rbo_id);
 		g_video.rbo_id = 0;
 	}
-		
+
 	glDisableVertexAttribArray(1);
-	glDeleteVertexArrays(1, &g_shader.vao);
+	glDeleteBuffers(1, &g_shader.vbo);
+	glDeleteVertexArrays(1, &g_shader.vbo);
 
 	if (g_video.hRC)
 	{
@@ -410,5 +489,5 @@ static void video_deinit() {
 	}
 
 	if (g_video.hDC) ReleaseDC(g_video.hwnd, g_video.hDC);
-	
+
 }
