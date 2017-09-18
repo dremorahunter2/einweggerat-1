@@ -27,17 +27,13 @@ class bind_list_i : public bind_list
 	{
 		unsigned         action;
 		dinput::di_event e;
-	};
-
-	struct button
-	{
 		bool           status;
 		signed         value;
+		TCHAR description[64];
 	};
 
 
 	std::vector< bind > list;
-	std::vector< button > button_list;
 
 	/*CRITICAL_SECTION sync;
 
@@ -56,23 +52,23 @@ class bind_list_i : public bind_list
 
 	void press( unsigned which, unsigned value )
 	{
-		assert(which < button_list.size());
-		button_list[which].status = true;
-		button_list[which].value = value;
+		assert(which < list.size());
+		list[which].status = true;
+		list[which].value = value;
 	}
 
 	void release( unsigned which, unsigned value )
 	{
-		assert(which < button_list.size());
-		button_list[which].status = false;
-		button_list[which].value = value;
+		assert(which < list.size());
+		list[which].status = false;
+		list[which].value = value;
 	}
 
 public:
 	virtual bool getbutton(int which, int & value)
 	{
-		assert(which < button_list.size());
-		const button & b = button_list[which];
+		assert(which < list.size());
+		const bind & b = list[which];
 		value = b.value;
 		return b.status;
 	}
@@ -98,14 +94,14 @@ public:
 			std::vector< bind >::iterator it;
 			for ( it = list.begin(); it < list.end(); ++it )
 			{
-				out->add( it->e, it->action );
+				out->add( it->e, it->action,it->description );
 			}
 		unlock();
 
 		return out;
 	}
 
-	virtual void add( const dinput::di_event & e, unsigned action )
+	virtual void add( const dinput::di_event & e, unsigned action,TCHAR *description )
 	{
 		lock();
 			if ( e.type == dinput::di_event::ev_joy )
@@ -115,16 +111,13 @@ public:
 					guids->add( guid );
 			}
 
-			bind b;
+			bind b = { 0 };
 			b.e = e;
 			b.action = action;
-
+			b.status = false;
+			b.value = 0;
+			lstrcpy(b.description, description);
 			list.push_back( b );
-
-			button b2;
-			b2.status = false;
-			b2.value = 0;
-			button_list.push_back(b2);
 
 
 
@@ -140,7 +133,7 @@ public:
 		return count;
 	}
 
-	virtual void get( unsigned index, dinput::di_event & e, unsigned & action )
+	virtual void get( unsigned index, dinput::di_event & e, unsigned & action, TCHAR * description )
 	{
 		lock();
 			assert( index < get_count() );
@@ -149,6 +142,7 @@ public:
 
 			e = b.e;
 			action = b.action;
+			lstrcpy(description, (TCHAR*)b.description);
 		unlock();
 	}
 
@@ -187,6 +181,47 @@ public:
 		unlock();
 	}
 
+	virtual void replace(unsigned index, const dinput::di_event & e, unsigned action, TCHAR* description)
+	{
+		lock();
+		std::vector< bind > list2;
+		list2 = list;
+		std::vector< bind >::iterator it;
+		GUID guid;
+		for (it = list.begin(); it < list.end(); ++it)
+		{
+			if (it->e.type == dinput::di_event::ev_joy)
+			{
+				if (guids->get_guid(it->e.joy.serial, guid))
+					guids->remove(guid);
+			}
+		}
+		list.clear();
+
+		for (int i = 0; i < (list2.end() - list2.begin()); i++)
+		{
+			bind b;
+			if (i == index)
+			{
+				b.e = e;
+				b.action = action;
+				lstrcpy(b.description, description);
+			}
+			else
+			{
+				b.e = list2.at(i).e;
+				b.action = list2.at(i).action;
+				lstrcpy(b.description, list2.at(i).description);
+			}
+			if (guids->get_guid(b.e.joy.serial, guid))
+				guids->add(guid);
+			list.push_back(b);
+		}
+		list2.clear();
+
+		unlock();
+	}
+
 	virtual const char * load( Data_Reader & in )
 	{
 		const char * err = "Invalid input config file";
@@ -202,23 +237,24 @@ public:
 
 				for ( unsigned i = 0; i < n; ++i )
 				{
-					bind b;
+					bind b = { 0 };
 
 					err = in.read( & b.action, sizeof( b.action ) ); if ( err ) break;
 					err = in.read( & b.e.type, sizeof( b.e.type ) ); if ( err ) break;
+					err = in.read( &b.description, sizeof(b.description)); if (err) break;
 
-					// Action remaps
-					if ( b.action >= 16 && b.action <= 23 )
-					{
-						static const unsigned action_remap[] = { 0, 1, 3, 4, 6, 7, 2, 5 };
-						b.action = action_remap[ b.action - 16 ] + 16;
-					}
-
-					if ( b.e.type == dinput::di_event::ev_key )
+					if ( b.e.type == dinput::di_event::ev_none )
 					{
 						err = in.read( & b.e.key.which, sizeof( b.e.key.which ) ); if ( err ) break;
 						list.push_back( b );
 					}
+
+					else if (b.e.type == dinput::di_event::ev_key)
+					{
+						err = in.read(&b.e.key.which, sizeof(b.e.key.which)); if (err) break;
+						list.push_back(b);
+					}
+
 					else if ( b.e.type == dinput::di_event::ev_joy )
 					{
 						GUID guid;
@@ -275,15 +311,17 @@ public:
 				std::vector< bind >::iterator it;
 				for ( it = list.begin(); it < list.end(); ++it )
 				{
-					// Action remaps
-					if ( it->action >= 16 && it->action <= 23 )
-					{
-						static const unsigned action_remap[] = { 0, 1, 6, 2, 3, 7, 4, 5 };
-						it->action = action_remap[ it->action - 16 ] + 16;
-					}
 
 					err = out.write( & it->action, sizeof( it->action ) ); if ( err ) break;
 					err = out.write( & it->e.type, sizeof( it->e.type ) ); if ( err ) break;
+					err = out.write(&it->description, sizeof(it->description)); if (err) break;
+
+
+					if (it->e.type == dinput::di_event::ev_none)
+					{
+						err = out.write(&it->e.key.which, sizeof(it->e.key.which)); if (err) break;
+					}
+
 
 					if ( it->e.type == dinput::di_event::ev_key )
 					{

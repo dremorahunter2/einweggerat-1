@@ -283,6 +283,13 @@ const char* load_coresettings(retro_variable *var)
 	return variable_val2;
 }
 
+std::wstring s2ws(const std::string& str)
+{
+	int size_needed = MultiByteToWideChar(CP_UTF8, 0, &str[0], (int)str.size(), NULL, 0);
+	std::wstring wstrTo(size_needed, 0);
+	MultiByteToWideChar(CP_UTF8, 0, &str[0], (int)str.size(), &wstrTo[0], size_needed);
+	return wstrTo;
+}
 
 bool core_environment(unsigned cmd, void *data) {
 	bool *bval;
@@ -310,16 +317,21 @@ bool core_environment(unsigned cmd, void *data) {
 	case RETRO_ENVIRONMENT_SET_INPUT_DESCRIPTORS: // 31
 	{
 		input *input_device = input::GetSingleton();
-		CString temp = _T("input.cfg");
+
+		char variable_val2[50] = { 0 };
+		TCHAR buffer[MAX_PATH] = { 0 };
+		GetModuleFileName(g_retro.handle, buffer, MAX_PATH);
+		PathRemoveExtension(buffer);
+		lstrcat(buffer, L"_input.cfg");
 		Std_File_Reader_u out;
-		if (!out.open(temp))
+		if (!out.open(buffer))
 		{
 			input_device->load(out);
+			out.close();
 		}
 		else
 		{
 			struct retro_input_descriptor *var = (struct retro_input_descriptor *)data;
-			
 			while (var != NULL && var->port == 0)
 			{
 				static int i = 0;
@@ -327,9 +339,16 @@ bool core_environment(unsigned cmd, void *data) {
 				keyboard.type = dinput::di_event::ev_none;
 				keyboard.key.type = dinput::di_event::key_none;
 				keyboard.key.which = NULL;
-				input_device->bl->add(keyboard, i);
+				CString str = var->description;
+				input_device->bl->add(keyboard, i,str.GetBuffer(NULL));
 				i++;
 				++var;
+			}
+			Std_File_Writer_u out2;
+			if (!out2.open(buffer))
+			{
+				input_device->save(out2);
+				out2.close();
 			}
 		}
 
