@@ -555,10 +555,10 @@ bool CLibretro::loadfile(char* filename)
 	AttachConsole(GetCurrentProcessId());
 	freopen("CON", "w", stdout);
 	
-	core_load(_T("cores/parallel_n64_libretro.dll"));
-	filename = "zelda.z64";
-//	core_load(_T("cores/snes9x_libretro.dll"));
-//	filename = "smw.sfc";
+//core_load(_T("cores/parallel_n64_libretro.dll"));
+	//filename = "zelda.z64";
+	core_load(_T("cores/snes9x_libretro.dll"));
+	filename = "smw.sfc";
 	struct retro_game_info info = { filename, 0 };
 	FILE *Input = fopen(filename, "rb");
 	if (!Input) return(NULL);
