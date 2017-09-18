@@ -51,6 +51,7 @@ void input::close()
 
 input::input()
 {
+	list_count = 0;
 	bits = 0;
 	lpDI = 0;
 	guids = 0;
@@ -124,12 +125,12 @@ input::~input()
 
 	void input::poll()
 	{
-		bl->process( di->read() );
+		if(bl)bl->process( di->read() );
 	}
 
-	bool input::getbutton(int which, int & value)
+	bool input::getbutton(int which, int & value, int & retro_id)
 	{
-		return bl->getbutton(which, value);
+		return bl->getbutton(which, value,retro_id);
 	}
 
 	unsigned input::read()

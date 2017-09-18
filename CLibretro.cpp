@@ -324,6 +324,7 @@ bool core_environment(unsigned cmd, void *data) {
 		PathRemoveExtension(buffer);
 		lstrcat(buffer, L"_input.cfg");
 		Std_File_Reader_u out;
+		lstrcpy(input_device->path, buffer);
 		if (!out.open(buffer))
 		{
 			input_device->load(out);
@@ -340,8 +341,9 @@ bool core_environment(unsigned cmd, void *data) {
 				keyboard.key.type = dinput::di_event::key_none;
 				keyboard.key.which = NULL;
 				CString str = var->description;
-				input_device->bl->add(keyboard, i,str.GetBuffer(NULL));
+				input_device->bl->add(keyboard, i,str.GetBuffer(NULL),var->id);
 				i++;
+				input_device->list_count++;
 				++var;
 			}
 			Std_File_Writer_u out2;
@@ -399,13 +401,24 @@ static void core_video_refresh(const void *data, unsigned width, unsigned height
 
 
 static void core_input_poll(void) {
-	
+	input *input_device = input::GetSingleton();
+	input_device->poll();
 }
 
 static int16_t core_input_state(unsigned port, unsigned device, unsigned index, unsigned id) {
-	if (port || index || device != RETRO_DEVICE_JOYPAD)
+	if (port || index || device != (RETRO_DEVICE_JOYPAD || RETRO_DEVICE_ANALOG))
 		return 0;
-
+	if (port != 0)return 0;
+	input *input_device = input::GetSingleton();
+	for (unsigned int i = 0; i < input_device->bl->get_count(); i++) {
+		int value = 0;
+		if (input_device)
+		{
+			int retro_id;
+			input_device->getbutton(i, value, retro_id);
+			if (retro_id == id)return value;
+		}
+	}
 	return 0;
 }
 

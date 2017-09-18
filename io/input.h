@@ -21,6 +21,8 @@ class input
 	// needed by SetCooperativeLevel inside enum callback
 	//HWND                    hWnd;
 public:
+	int list_count;
+	TCHAR path[MAX_PATH];
 	input();
 	~input();
 	unsigned                bits;
@@ -42,7 +44,7 @@ public:
 
 	// input_i_dinput
 	void poll();
-	bool getbutton(int which, int & value);
+	bool getbutton(int which, int & value,int & retro_id);
 
 	unsigned read();
 

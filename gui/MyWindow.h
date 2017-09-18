@@ -71,20 +71,42 @@ public:
 
 	BEGIN_MSG_MAP(CInputView)
 		MESSAGE_HANDLER(WM_INITDIALOG, OnInitDialogView1)
-		//MESSAGE_HANDLER(WM_TIMER, OnTimer)
+		MESSAGE_HANDLER(WM_TIMER, OnTimer)
 		MESSAGE_HANDLER(WM_DESTROY, OnClose)
+		COMMAND_ID_HANDLER(IDCANCEL, OnCancel)
+		COMMAND_ID_HANDLER(IDOK, OnOK)
 		NOTIFY_HANDLER(IDC_LIST_ASSIGN, NM_DBLCLK, NotifyHandler)
 		NOTIFY_HANDLER(IDC_LIST_ASSIGN, NM_CLICK, NotifyHandlerClick)
 	END_MSG_MAP()
 
-	LRESULT OnClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
+	LRESULT OnCancel(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 	{
+		EndDialog(wID);
+		return 0;
+	}
+
+
+	LRESULT OnOK(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
+	{
+		Std_File_Writer_u out2;
+		if (!out2.open(input->path))
+		{
+			input->save(out2);
+			out2.close();
+		}
+		EndDialog(wID);
+		return 0;
+	}
+
+	LRESULT OnClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled)
+	{
+		KillTimer(0x1337);
 		if (di)
 		{
 			delete di;
 			di = 0;
 		}
-		KillTimer(0x1337);
+		bHandled = true;
 		return 0;
 	}
 
@@ -103,11 +125,12 @@ public:
 		{
 			dinput::di_event e;
 			unsigned         action;
+			unsigned retro_id;
 			TCHAR description[64] = { 0 };
-			bl->get(n, e, action,description);
+			bl->get(n, e, action,description,retro_id);
 			remove_from_list(assign, n);
 			add_to_list(assign, last_event, action, n,description);
-			bl->replace(n, last_event, action,description);
+			bl->replace(n, last_event, action,description,retro_id);
 			input = input::GetSingleton();
 			input->bl = bl;
 			input->guids = guids;
@@ -134,8 +157,6 @@ public:
 
 		assign = GetDlgItem(IDC_LIST_ASSIGN);
 		event = GetDlgItem(IDC_TREE_ACTIONS);
-		add = GetDlgItem(IDC_ADD);
-		remove = GetDlgItem(IDC_REMOVE);
 		editevent = GetDlgItem(IDC_EDIT_EVENT);
 
 
@@ -151,45 +172,25 @@ public:
 			assign.InsertColumn(0, &lvc);
 
 			lvc.cx = 150;
-			lvc.pszText = _T("Action");
+			lvc.pszText = _T("Core action");
 			lvc.iSubItem = 1;
 
 			assign.InsertColumn(1, &lvc);
 			assign.SetExtendedListViewStyle(LVS_EX_FULLROWSELECT);
 			dinput::di_event e;
 			unsigned         action;
+			unsigned retro_id;
 
 			for (unsigned i = 0, j = bl->get_count(); i < j; ++i)
 			{
 				TCHAR description[64] = { 0 };
-				bl->get(i, e, action, description);
+				bl->get(i, e, action, description,retro_id);
 				std::tostringstream event_text;
 				format_event(e, event_text);
 				add_to_list(assign, e, action,INT_MAX,description);
 			}
 
 		}
-
-		/*
-
-		HTREEITEM item;
-		TVINSERTSTRUCT tvi;
-		memset(&tvi, 0, sizeof(tvi));
-		tvi.hParent = TVI_ROOT;
-		tvi.hInsertAfter = TVI_ROOT;
-		tvi.item.mask = TVIF_TEXT;
-		tvi.item.pszText = (TCHAR *)item_roots[0];
-		item = (HTREEITEM)SendMessage(event, TVM_INSERTITEM, 0, (LPARAM)& tvi);
-		tvi.hParent = item;
-		tvi.hInsertAfter = TVI_LAST;
-		for (unsigned i = 0; i < 8; ++i)
-		{
-			tvi.item.pszText = (TCHAR *)item_pad[i];
-			tvi.item.lParam = i;
-			item = (HTREEITEM)SendMessage(event, TVM_INSERTITEM, 0, (LPARAM)& tvi);
-			tree_items.push_back(item);
-		}
-		*/
 		editevent.SetFocus();
 		SetTimer(0x1337, 10);
 		notify_d = false;

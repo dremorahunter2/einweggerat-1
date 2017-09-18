@@ -30,6 +30,7 @@ class bind_list_i : public bind_list
 		bool           status;
 		signed         value;
 		TCHAR description[64];
+		unsigned retro_id;
 	};
 
 
@@ -65,11 +66,12 @@ class bind_list_i : public bind_list
 	}
 
 public:
-	virtual bool getbutton(int which, int & value)
+	virtual bool getbutton(int which, int & value, int & retro_id)
 	{
 		assert(which < list.size());
 		const bind & b = list[which];
 		value = b.value;
+		retro_id = b.retro_id;
 		return b.status;
 	}
 
@@ -94,14 +96,14 @@ public:
 			std::vector< bind >::iterator it;
 			for ( it = list.begin(); it < list.end(); ++it )
 			{
-				out->add( it->e, it->action,it->description );
+				out->add( it->e, it->action,it->description,it->retro_id );
 			}
 		unlock();
 
 		return out;
 	}
 
-	virtual void add( const dinput::di_event & e, unsigned action,TCHAR *description )
+	virtual void add( const dinput::di_event & e, unsigned action,TCHAR *description, unsigned retro_id )
 	{
 		lock();
 			if ( e.type == dinput::di_event::ev_joy )
@@ -116,6 +118,7 @@ public:
 			b.action = action;
 			b.status = false;
 			b.value = 0;
+			b.retro_id = retro_id;
 			lstrcpy(b.description, description);
 			list.push_back( b );
 
@@ -133,7 +136,7 @@ public:
 		return count;
 	}
 
-	virtual void get( unsigned index, dinput::di_event & e, unsigned & action, TCHAR * description )
+	virtual void get( unsigned index, dinput::di_event & e, unsigned & action, TCHAR * description, unsigned & retro_id )
 	{
 		lock();
 			assert( index < get_count() );
@@ -142,6 +145,7 @@ public:
 
 			e = b.e;
 			action = b.action;
+			retro_id = b.retro_id;
 			lstrcpy(description, (TCHAR*)b.description);
 		unlock();
 	}
@@ -181,7 +185,7 @@ public:
 		unlock();
 	}
 
-	virtual void replace(unsigned index, const dinput::di_event & e, unsigned action, TCHAR* description)
+	virtual void replace(unsigned index, const dinput::di_event & e, unsigned action, TCHAR* description, unsigned retro_id)
 	{
 		lock();
 		std::vector< bind > list2;
@@ -205,12 +209,14 @@ public:
 			{
 				b.e = e;
 				b.action = action;
+				b.retro_id = retro_id;
 				lstrcpy(b.description, description);
 			}
 			else
 			{
 				b.e = list2.at(i).e;
 				b.action = list2.at(i).action;
+				b.retro_id = list2.at(i).retro_id;
 				lstrcpy(b.description, list2.at(i).description);
 			}
 			if (guids->get_guid(b.e.joy.serial, guid))
@@ -242,6 +248,7 @@ public:
 					err = in.read( & b.action, sizeof( b.action ) ); if ( err ) break;
 					err = in.read( & b.e.type, sizeof( b.e.type ) ); if ( err ) break;
 					err = in.read( &b.description, sizeof(b.description)); if (err) break;
+					err = in.read( &b.retro_id, sizeof(b.retro_id)); if (err) break;
 
 					if ( b.e.type == dinput::di_event::ev_none )
 					{
@@ -315,6 +322,7 @@ public:
 					err = out.write( & it->action, sizeof( it->action ) ); if ( err ) break;
 					err = out.write( & it->e.type, sizeof( it->e.type ) ); if ( err ) break;
 					err = out.write(&it->description, sizeof(it->description)); if (err) break;
+					err = out.write(&it->retro_id, sizeof(it->retro_id)); if (err) break;
 
 
 					if (it->e.type == dinput::di_event::ev_none)
