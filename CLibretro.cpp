@@ -307,6 +307,37 @@ bool core_environment(unsigned cmd, void *data) {
 	}
 	break;
 
+	case RETRO_ENVIRONMENT_SET_INPUT_DESCRIPTORS: // 31
+	{
+		input *input_device = input::GetSingleton();
+		CString temp = _T("input.cfg");
+		Std_File_Reader_u out;
+		if (!out.open(temp))
+		{
+			input_device->load(out);
+		}
+		else
+		{
+			struct retro_input_descriptor *var = (struct retro_input_descriptor *)data;
+			
+			while (var != NULL && var->port == 0)
+			{
+				static int i = 0;
+				dinput::di_event keyboard;
+				keyboard.type = dinput::di_event::ev_none;
+				keyboard.key.type = dinput::di_event::key_none;
+				keyboard.key.which = NULL;
+				input_device->bl->add(keyboard, i);
+				i++;
+				++var;
+			}
+		}
+
+		
+		return true;
+	}
+	break;
+
 	case RETRO_ENVIRONMENT_SET_VARIABLES:
 	{
 		struct retro_variable *var = (struct retro_variable *)data;
@@ -471,6 +502,7 @@ CLibretro::CLibretro()
 
 CLibretro::~CLibretro(void)
 {
+	if (isEmulating)isEmulating = false;
 	kill();
 }
 
@@ -490,7 +522,7 @@ long long milliseconds_now() {
 
 bool CLibretro::loadfile(char* filename)
 {
-	
+	if (isEmulating)isEmulating = false;
 	struct retro_system_info system = {0};
 	
 	g_video = { 0 };
@@ -537,8 +569,8 @@ bool CLibretro::loadfile(char* filename)
 	if (info.data)
 	free((void*)info.data);
 
-	DWORD ThreadID;
-	CreateThread(NULL, 0, libretro_thread, (void*) this, 0, &ThreadID);
+	
+	thread_handle = CreateThread(NULL, 0, libretro_thread, (void*) this, 0, &thread_id);
 	
 	return isEmulating;
 }
@@ -551,16 +583,12 @@ DWORD WINAPI CLibretro::libretro_thread(void* Param)
 	g_retro.retro_get_system_av_info(&av);
 
 	::video_configure(&av.geometry, This->emulator_hwnd);
-	This->_samples = (int16_t*)malloc(SAMPLE_COUNT);
-	memset(This->_samples, 0, SAMPLE_COUNT);
-
+	
 	double orig_ratio = 0;
-
 	DEVMODE lpDevMode;
 	memset(&lpDevMode, 0, sizeof(DEVMODE));
 	lpDevMode.dmSize = sizeof(DEVMODE);
 	lpDevMode.dmDriverExtra = 0;
-
 	if (EnumDisplaySettings(NULL, ENUM_CURRENT_SETTINGS, &lpDevMode) == 0) {
 		orig_ratio = (double)60 / av.timing.fps; // default value if cannot retrieve from user settings.
 	}
@@ -569,6 +597,8 @@ DWORD WINAPI CLibretro::libretro_thread(void* Param)
 		orig_ratio = (double)lpDevMode.dmDisplayFrequency / av.timing.fps;
 	}
 	double sampleRate = av.timing.sample_rate * orig_ratio;
+	This->_samples = (int16_t*)malloc(SAMPLE_COUNT);
+	memset(This->_samples, 0, SAMPLE_COUNT);
 	This->_audio = new Audio();
 	This->_audio->init(sampleRate);
 
@@ -664,12 +694,7 @@ void CLibretro::run()
 			_audio->setRate(sampleRate);
 		}*/
 		_audio->mix(_samples, _samplesCount / 2);
-		
-		
-		
-
 	}
-	int i = 0;
 	
 }
 bool CLibretro::init(HWND hwnd)

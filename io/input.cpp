@@ -127,7 +127,7 @@ input::~input()
 		bl->process( di->read() );
 	}
 
-	bool input::getbutton(int which, int value)
+	bool input::getbutton(int which, int & value)
 	{
 		return bl->getbutton(which, value);
 	}

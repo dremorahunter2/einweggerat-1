@@ -2,6 +2,8 @@
 // Microsoft Visual C++ generated include file.
 // Used by emu_wtl.rc
 //
+#define IDOK2                           3
+#define IDCANCEL2                       4
 #define IDD_ABOUT                       104
 #define IDD_SETTINGS                    112
 #define IDD_PATHS                       112
@@ -13,6 +15,7 @@
 #define IDR_MAINFRAME                   129
 #define IDD_Z64SETTINGS1                129
 #define IDI_ICON1                       134
+#define IDD_VARIABLES                   135
 #define IDC_LIST_ASSIGN                 1000
 #define IDC_APPVER                      1001
 #define IDC_ADD                         1001
@@ -53,6 +56,7 @@
 #define IDC_Z64RRDPASYNC                1189
 #define IDC_VIDRES                      1190
 #define IDC_Z64POTFBO                   1190
+#define IDC_LIST_VARIABLES              1191
 #define IDC_EXIT                        40001
 #define IDC_ABOUT                       40002
 #define ID_FILE_OPEN40003               40003
@@ -88,14 +92,15 @@
 #define ID_PREFERENCES_PATHS            40033
 #define ID_PREFERENCES_INPUTCONFIG      40034
 #define ID_OPTIONS_COREOPTIONS          40035
+#define ID_ABOUT                        40036
 
 // Next default values for new objects
 // 
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
-#define _APS_NEXT_RESOURCE_VALUE        135
-#define _APS_NEXT_COMMAND_VALUE         40036
-#define _APS_NEXT_CONTROL_VALUE         1191
+#define _APS_NEXT_RESOURCE_VALUE        137
+#define _APS_NEXT_COMMAND_VALUE         40037
+#define _APS_NEXT_CONTROL_VALUE         1192
 #define _APS_NEXT_SYMED_VALUE           101
 #endif
 #endif

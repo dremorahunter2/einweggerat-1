@@ -81,6 +81,8 @@ public:
 		END_MSG_MAP()
 
 		CLibretro *emulator;
+		input*    input_device;
+
 
 
 		BOOL PreTranslateMessage(MSG* pMsg)
@@ -129,6 +131,8 @@ public:
 			ATLASSERT(pLoop != NULL);
 			bHandled = FALSE;
 			emulator = CLibretro::CreateInstance(m_hWnd ) ;
+			input_device = input::CreateInstance(GetModuleHandle(NULL), m_hWnd);
+
 			RegisterDropTarget();
 			SetRedraw(FALSE);
 			TIMECAPS tc; timeGetDevCaps(&tc, sizeof(TIMECAPS)); 
@@ -157,6 +161,7 @@ public:
 			UINT gwTimerRes = min(max(tc.wPeriodMin, 1), tc.wPeriodMax);
 			timeEndPeriod(gwTimerRes);
 			if (emulator)emulator->kill();
+			if (input_device)input_device->close();
 			CMessageLoop* pLoop = _Module.GetMessageLoop();
 			ATLASSERT(pLoop != NULL);
 			pLoop->RemoveMessageFilter(this);

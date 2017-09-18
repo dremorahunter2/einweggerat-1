@@ -219,3 +219,27 @@ Auto_File_Writer::~Auto_File_Writer()
 			delete data;
 	#endif
 }
+
+blargg_err_t Std_File_Reader_u::open(const TCHAR path[])
+{
+#ifdef _UNICODE
+	char * path8 = blargg_to_utf8(path);
+	blargg_err_t err = Std_File_Reader::open(path8);
+	free(path8);
+	return err;
+#else
+	return Std_File_Reader::open(path);
+#endif
+}
+
+error_t Std_File_Writer_u::open(const TCHAR* path)
+{
+	reset(_tfopen(path, _T("wb")));
+	if (!file())
+		RAISE_ERROR("Couldn't open file for writing");
+
+	// to do: increase file buffer size
+	//setvbuf( file_, NULL, _IOFBF, 32 * 1024L );
+
+	return NULL;
+}

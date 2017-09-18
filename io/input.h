@@ -42,7 +42,7 @@ public:
 
 	// input_i_dinput
 	void poll();
-	bool getbutton(int which, int value);
+	bool getbutton(int which, int & value);
 
 	unsigned read();
 

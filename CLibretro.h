@@ -9,6 +9,7 @@
 #define OUTSIDE_SPEEX
 #include "io/audio/speex_resampler.h"
 #define MAL_NO_WASAPI
+#include "io/input.h"
 #include "io/audio/mini_al.h"
 #include "libretro-common-master/include/queues/fifo_queue.h"
 #include "libretro-common-master/include/rthreads/rthreads.h"
@@ -50,6 +51,8 @@ private:
 	static	CLibretro* m_Instance ;
 	
 public:
+	HANDLE thread_handle;
+	DWORD thread_id;
 	HWND emulator_hwnd;
 	static DWORD WINAPI libretro_thread(void* Param);
 	static CLibretro* CreateInstance(HWND hwnd ) ;

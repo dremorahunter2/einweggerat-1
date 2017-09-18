@@ -70,7 +70,7 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LinkIncremental>true</LinkIncremental>
-    <IncludePath>C:\codecrack\src\wtl\include;C:\codecrack\code\gitmudlord\libretro_player\libretro-common-master\include;$(IncludePath)</IncludePath>
+    <IncludePath>C:\codecrack\src\wtl\include;C:\codecrack\code\github\libretro_loader\libretro-common-master\include;$(IncludePath)</IncludePath>
     <PreBuildEventUseInBuild>false</PreBuildEventUseInBuild>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">

@@ -31,7 +31,7 @@ public:
 
 	virtual unsigned get_count( ) = 0;
 
-	virtual bool getbutton(int which, int value) = 0;
+	virtual bool getbutton(int which, int & value) = 0;
 
 	virtual void get( unsigned index, dinput::di_event &, unsigned & action ) = 0;
 

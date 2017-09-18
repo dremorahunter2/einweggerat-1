@@ -69,7 +69,7 @@ class bind_list_i : public bind_list
 	}
 
 public:
-	virtual bool getbutton(int which, int value)
+	virtual bool getbutton(int which, int & value)
 	{
 		assert(which < button_list.size());
 		const button & b = button_list[which];

@@ -16,13 +16,15 @@ public:
 		{
 			ev_key,
 			ev_joy,
-			ev_xinput
+			ev_xinput,
+			ev_none
 		} event_type;
 
 		typedef enum
 		{
 			key_up,
-			key_down
+			key_down,
+			key_none
 		} key_type;
 
 		typedef enum
