@@ -22,6 +22,18 @@ public:
 		bind_pad_0_right,
 	};
 
+	struct bind
+	{
+		unsigned         action;
+		dinput::di_event e;
+		bool           status;
+		signed         value;
+		TCHAR description[64];
+		unsigned retro_id;
+		unsigned retro_analog_id;
+		bool isleftstick;
+	};
+
 	virtual ~bind_list() {}
 
 	virtual bind_list * copy() = 0;
@@ -33,7 +45,7 @@ public:
 
 	virtual unsigned get_count( ) = 0;
 
-	virtual bool getbutton(int which, int & value,int & retro_id) = 0;
+	virtual bool getbutton(int which, int & value,int & retro_id,bool isanalog) = 0;
 
 	virtual void get( unsigned index, dinput::di_event &, unsigned & action , TCHAR * description, unsigned & retro_id) = 0;
 

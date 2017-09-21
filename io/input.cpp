@@ -128,9 +128,9 @@ input::~input()
 		if(bl)bl->process( di->read() );
 	}
 
-	bool input::getbutton(int which, int & value, int & retro_id)
+	bool input::getbutton(int which, int & value, int & retro_id, bool isanalog)
 	{
-		return bl->getbutton(which, value,retro_id);
+		return bl->getbutton(which, value,retro_id,isanalog);
 	}
 
 	unsigned input::read()

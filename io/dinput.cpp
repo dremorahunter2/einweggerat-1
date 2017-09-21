@@ -380,8 +380,8 @@ public:
 
 			for ( ;; )
 			{
-				DIDEVICEOBJECTDATA buffer[ 16 ];
-				DWORD n_events = 16;
+				DIDEVICEOBJECTDATA buffer[ 32 ];
+				DWORD n_events = 32;
 
 				hr = lpdKeyboard->GetDeviceData( sizeof( DIDEVICEOBJECTDATA ), buffer, &n_events, 0 );
 
@@ -418,8 +418,8 @@ public:
 
 			for ( ;; )
 			{
-				DIDEVICEOBJECTDATA buffer[ 16 ];
-				DWORD n_events = 16;
+				DIDEVICEOBJECTDATA buffer[ 32 ];
+				DWORD n_events = 32;
 
 				hr = it->device->GetDeviceData( sizeof( DIDEVICEOBJECTDATA ), buffer, &n_events, 0 );
 
@@ -443,7 +443,7 @@ public:
 						if ( od.dwData < 0x8000 - 4096 ) e.joy.axis = di_event::axis_negative;
 						else if ( od.dwData > 0x8000 + 4096 ) e.joy.axis = di_event::axis_positive;
 						else e.joy.axis = di_event::axis_center;
-
+						e.joy.value = od.dwData;
 						events.push_back( e );
 					}
 					else if ( od.dwOfs >= DIJOFS_POV( 0 ) && od.dwOfs <= DIJOFS_POV( 3 ) )

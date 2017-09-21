@@ -333,17 +333,31 @@ bool core_environment(unsigned cmd, void *data) {
 		else
 		{
 			struct retro_input_descriptor *var = (struct retro_input_descriptor *)data;
+			static int i = 0;
 			while (var != NULL && var->port == 0)
 			{
-				static int i = 0;
+				
 				dinput::di_event keyboard;
 				keyboard.type = dinput::di_event::ev_none;
 				keyboard.key.type = dinput::di_event::key_none;
 				keyboard.key.which = NULL;
 				CString str = var->description;
-				input_device->bl->add(keyboard, i,str.GetBuffer(NULL),var->id);
+			    int id = var->id;
+				if (var->device == RETRO_DEVICE_ANALOG)
+				{
+					if (var->index == RETRO_DEVICE_INDEX_ANALOG_LEFT)
+					{
+						if (var->id == RETRO_DEVICE_ID_ANALOG_X)id = 16;
+						if (var->id == RETRO_DEVICE_ID_ANALOG_Y)id = 17;
+					}
+					if (var->index == RETRO_DEVICE_INDEX_ANALOG_RIGHT)
+					{
+						if (var->id == RETRO_DEVICE_ID_ANALOG_X)id = 18;
+						if (var->id == RETRO_DEVICE_ID_ANALOG_Y)id = 19;
+					}
+				}
+				input_device->bl->add(keyboard,i,str.GetBuffer(NULL), id);
 				i++;
-				input_device->list_count++;
 				++var;
 			}
 			Std_File_Writer_u out2;
@@ -406,17 +420,36 @@ static void core_input_poll(void) {
 }
 
 static int16_t core_input_state(unsigned port, unsigned device, unsigned index, unsigned id) {
-	if (port || index || device != (RETRO_DEVICE_JOYPAD || RETRO_DEVICE_ANALOG))
-		return 0;
 	if (port != 0)return 0;
 	input *input_device = input::GetSingleton();
-	for (unsigned int i = 0; i < input_device->bl->get_count(); i++) {
-		int value = 0;
-		if (input_device)
-		{
-			int retro_id;
-			input_device->getbutton(i, value, retro_id);
-			if (retro_id == id)return value;
+	if (input_device && input_device->bl != NULL)
+	{
+		
+		for (unsigned int i = 0; i < input_device->bl->get_count(); i++) {
+			{
+				if (device == RETRO_DEVICE_ANALOG)
+				{
+					if (index == RETRO_DEVICE_INDEX_ANALOG_LEFT || RETRO_DEVICE_INDEX_ANALOG_RIGHT)
+					{
+						int retro_id = 0;
+						signed value = 0;
+						input_device->getbutton(i, value, retro_id);
+						if (value <= -0x8000)value = -0x7fff;
+						if (value >= 0x8000)value = 0x7fff;
+						if (id == RETRO_DEVICE_ID_ANALOG_X && retro_id == 16 || id == RETRO_DEVICE_ID_ANALOG_Y && retro_id == 17)
+						{	
+							return value;
+						}	
+					}
+				}
+				else if(device == RETRO_DEVICE_JOYPAD)
+				{
+					int retro_id;
+					int value = 0;
+					input_device->getbutton(i, value, retro_id);
+					if (retro_id == id)return value;
+				}
+			}
 		}
 	}
 	return 0;
@@ -568,10 +601,10 @@ bool CLibretro::loadfile(char* filename)
 	AttachConsole(GetCurrentProcessId());
 	freopen("CON", "w", stdout);
 	
-//core_load(_T("cores/parallel_n64_libretro.dll"));
-	//filename = "zelda.z64";
-	core_load(_T("cores/snes9x_libretro.dll"));
-	filename = "smw.sfc";
+core_load(_T("cores/parallel_n64_libretro.dll"));
+	filename = "zelda.z64";
+	//core_load(_T("cores/snes9x_libretro.dll"));
+	//filename = "smw.sfc";
 	struct retro_game_info info = { filename, 0 };
 	FILE *Input = fopen(filename, "rb");
 	if (!Input) return(NULL);

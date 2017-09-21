@@ -23,15 +23,7 @@ class bind_list_i : public bind_list
 	int frames_until_paused;
 	int frames_until_run;
 
-	struct bind
-	{
-		unsigned         action;
-		dinput::di_event e;
-		bool           status;
-		signed         value;
-		TCHAR description[64];
-		unsigned retro_id;
-	};
+	
 
 
 	std::vector< bind > list;
@@ -66,7 +58,7 @@ class bind_list_i : public bind_list
 	}
 
 public:
-	virtual bool getbutton(int which, int & value, int & retro_id)
+	virtual bool getbutton(int which, int & value, int & retro_id, bool isanalog)
 	{
 		assert(which < list.size());
 		const bind & b = list[which];
@@ -428,7 +420,7 @@ public:
 								itb->e.joy.type == dinput::di_event::joy_axis &&
 								itb->e.joy.which == it->joy.which )
 							{
-								if ( it->joy.axis != itb->e.joy.axis ) release( itb->action, ( it->joy.axis == dinput::di_event::axis_negative ) ? ( ( 32767 - it->joy.value ) * 2 ) : ( ( it->joy.value - 32768 ) * 2 ) );
+								if ( it->joy.axis != itb->e.joy.axis ) release( itb->action, ( it->joy.axis == dinput::di_event::axis_negative ) ? ( ( 0 - it->joy.value ) * 2 ) : ( ( it->joy.value - 32768 ) * 2 ) );
 							}
 						}
 						for ( itb = list.begin(); itb < list.end(); ++itb )
@@ -438,7 +430,7 @@ public:
 								itb->e.joy.type == dinput::di_event::joy_axis &&
 								itb->e.joy.which == it->joy.which )
 							{
-								if ( it->joy.axis == itb->e.joy.axis ) press( itb->action, ( it->joy.axis == dinput::di_event::axis_negative ) ? ( ( 32767 - it->joy.value ) * 2 ) : ( ( it->joy.value - 32768 ) * 2 ) );
+								if ( it->joy.axis == itb->e.joy.axis ) press( itb->action, ( it->joy.axis == dinput::di_event::axis_negative ) ? ( ( 0 - it->joy.value ) * 2 ) : ( ( it->joy.value - 32768 ) * 2 ) );
 							}
 						}
 					}

@@ -44,7 +44,7 @@ public:
 
 	// input_i_dinput
 	void poll();
-	bool getbutton(int which, int & value,int & retro_id);
+	bool getbutton(int which, int & value,int & retro_id, bool isanalog=false);
 
 	unsigned read();
 
