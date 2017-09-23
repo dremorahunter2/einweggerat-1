@@ -497,7 +497,7 @@ public:
 
 #define XINPUT_PUSH_AXIS(n, stick, v) \
 				e.xinput.which = n; \
-				e.xinput.value = (unsigned)((xinput_##stick##_stick_deadzone(state.Gamepad.##v)) + 32768); \
+				e.xinput.value = (unsigned)((xinput_##stick##_stick_deadzone(state.Gamepad.##v))); \
 				if ( xinput_##stick##_stick_motion( xinput_last_state[ i ].Gamepad.##v, state.Gamepad.##v, &e.xinput.axis ) ) events.push_back( e )
 
 				XINPUT_PUSH_AXIS( 0, left, sThumbLX );

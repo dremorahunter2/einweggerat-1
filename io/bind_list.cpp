@@ -420,7 +420,7 @@ public:
 								itb->e.joy.type == dinput::di_event::joy_axis &&
 								itb->e.joy.which == it->joy.which )
 							{
-								if ( it->joy.axis != itb->e.joy.axis && it->joy.axis != dinput::di_event::axis_center) release( itb->action, ( it->joy.axis == dinput::di_event::axis_negative ) ? ( ( it->joy.value ) ) : ( ( it->joy.value - 0 ) ) );
+								if ( it->joy.axis != itb->e.joy.axis && it->joy.axis != dinput::di_event::axis_center) release( itb->action, it->joy.value );
 							}
 						}
 						for ( itb = list.begin(); itb < list.end(); ++itb )
@@ -430,7 +430,7 @@ public:
 								itb->e.joy.type == dinput::di_event::joy_axis &&
 								itb->e.joy.which == it->joy.which )
 							{
-								if ( it->joy.axis == itb->e.joy.axis && it->joy.axis != dinput::di_event::axis_center) press( itb->action, ( it->joy.axis == dinput::di_event::axis_negative ) ? ( (it->joy.value )) : ( ( it->joy.value - 0 ) ) );
+								if ( it->joy.axis == itb->e.joy.axis && it->joy.axis != dinput::di_event::axis_center) press(itb->action, it->joy.value);
 							}
 						}
 					}
@@ -470,7 +470,7 @@ public:
 								itb->e.xinput.type == dinput::di_event::xinput_axis &&
 								itb->e.xinput.which == it->xinput.which )
 							{
-								if ( it->xinput.axis != itb->e.xinput.axis ) release( itb->action, ( it->joy.axis == dinput::di_event::axis_negative ) ? ( ( 32767 - it->joy.value ) * 2 ) : ( ( it->joy.value - 32768 ) * 2 ) );
+								if ( it->xinput.axis != itb->e.xinput.axis )release(itb->action, it->joy.value);
 							}
 						}
 						for ( itb = list.begin(); itb < list.end(); ++itb )
@@ -480,7 +480,7 @@ public:
 								itb->e.xinput.type == dinput::di_event::xinput_axis &&
 								itb->e.xinput.which == it->xinput.which )
 							{
-								if ( it->xinput.axis == itb->e.xinput.axis ) press( itb->action, ( it->xinput.axis == dinput::di_event::axis_negative ) ? ( ( 32767 - it->joy.value ) * 2 ) : ( ( it->joy.value - 32768 ) * 2 ) );
+								if (it->xinput.axis == itb->e.xinput.axis) press(itb->action, it->joy.value);
 							}
 						}
 					}
