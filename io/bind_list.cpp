@@ -43,14 +43,14 @@ class bind_list_i : public bind_list
 #define lock()
 #define unlock()
 
-	void press( unsigned which, unsigned value )
+	void press( unsigned which, int16_t value )
 	{
 		assert(which < list.size());
 		list[which].status = true;
 		list[which].value = value;
 	}
 
-	void release( unsigned which, unsigned value )
+	void release( unsigned which, int16_t value )
 	{
 		assert(which < list.size());
 		list[which].status = false;
@@ -58,7 +58,7 @@ class bind_list_i : public bind_list
 	}
 
 public:
-	virtual bool getbutton(int which, int & value, int & retro_id, bool isanalog)
+	virtual bool getbutton(int which, int16_t & value, int & retro_id, bool isanalog)
 	{
 		assert(which < list.size());
 		const bind & b = list[which];
@@ -420,7 +420,7 @@ public:
 								itb->e.joy.type == dinput::di_event::joy_axis &&
 								itb->e.joy.which == it->joy.which )
 							{
-								if ( it->joy.axis != itb->e.joy.axis ) release( itb->action, ( it->joy.axis == dinput::di_event::axis_negative ) ? ( ( 0 - it->joy.value ) * 2 ) : ( ( it->joy.value - 32768 ) * 2 ) );
+								if ( it->joy.axis != itb->e.joy.axis && it->joy.axis != dinput::di_event::axis_center) release( itb->action, ( it->joy.axis == dinput::di_event::axis_negative ) ? ( ( it->joy.value ) ) : ( ( it->joy.value - 0 ) ) );
 							}
 						}
 						for ( itb = list.begin(); itb < list.end(); ++itb )
@@ -430,7 +430,7 @@ public:
 								itb->e.joy.type == dinput::di_event::joy_axis &&
 								itb->e.joy.which == it->joy.which )
 							{
-								if ( it->joy.axis == itb->e.joy.axis ) press( itb->action, ( it->joy.axis == dinput::di_event::axis_negative ) ? ( ( 0 - it->joy.value ) * 2 ) : ( ( it->joy.value - 32768 ) * 2 ) );
+								if ( it->joy.axis == itb->e.joy.axis && it->joy.axis != dinput::di_event::axis_center) press( itb->action, ( it->joy.axis == dinput::di_event::axis_negative ) ? ( (it->joy.value )) : ( ( it->joy.value - 0 ) ) );
 							}
 						}
 					}

@@ -435,15 +435,28 @@ public:
 				for ( unsigned i = 0; i < n_events; ++i )
 				{
 					DIDEVICEOBJECTDATA & od = buffer[ i ];
-					if ( od.dwOfs >= DIJOFS_X && od.dwOfs <= DIJOFS_SLIDER( 1 ) )
+					if (od.dwOfs >= DIJOFS_X && od.dwOfs <= DIJOFS_SLIDER(1))
 					{
 						e.joy.type = di_event::joy_axis;
-						e.joy.which = ( od.dwOfs - DIJOFS_X ) / ( DIJOFS_Y - DIJOFS_X );
+						e.joy.which = (od.dwOfs - DIJOFS_X) / (DIJOFS_Y - DIJOFS_X);
 
-						if ( od.dwData < 0x8000 - 4096 ) e.joy.axis = di_event::axis_negative;
-						else if ( od.dwData > 0x8000 + 4096 ) e.joy.axis = di_event::axis_positive;
-						else e.joy.axis = di_event::axis_center;
-						e.joy.value = od.dwData;
+
+						if (od.dwData < 0x8000 - 4096)
+						{
+							e.joy.axis = di_event::axis_negative;
+							e.joy.value = od.dwData;
+						}
+						else if (od.dwData > 0x8000 + 4096)
+						{
+							e.joy.axis = di_event::axis_positive;
+							e.joy.value = od.dwData;
+						}
+						else
+						{
+							e.joy.axis = di_event::axis_center;
+							//e.joy.value = 0;
+						}
+						
 						events.push_back( e );
 					}
 					else if ( od.dwOfs >= DIJOFS_POV( 0 ) && od.dwOfs <= DIJOFS_POV( 3 ) )
@@ -612,15 +625,15 @@ private:
 			diprg.diph.dwHeaderSize = sizeof( diprg.diph ); 
 			diprg.diph.dwHow        = DIPH_BYOFFSET; 
 
-			diprg.lMin = 0;
-			diprg.lMax = 0xFFFF;
+			diprg.lMin = -0x7fff;
+			diprg.lMax = 0x7fff;
 
 			DIPROPDWORD didz;
 			didz.diph.dwSize        = sizeof( didz );
 			didz.diph.dwHeaderSize  = sizeof( didz.diph );
-			didz.diph.dwHow         = DIPH_BYOFFSET;
+			didz.diph.dwHow = DIPH_BYOFFSET;
 
-			didz.dwData = 0x400;
+			didz.dwData =0x400;
 
 			for ( unsigned i = DIJOFS_X; i <= DIJOFS_SLIDER( 1 ); i += ( DIJOFS_Y - DIJOFS_X ) )
 			{

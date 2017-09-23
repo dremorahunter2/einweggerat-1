@@ -349,14 +349,20 @@ bool core_environment(unsigned cmd, void *data) {
 					{
 						if (var->id == RETRO_DEVICE_ID_ANALOG_X)id = 16;
 						if (var->id == RETRO_DEVICE_ID_ANALOG_Y)id = 17;
+						input_device->bl->add(keyboard, i, str.GetBuffer(NULL), id);
 					}
 					if (var->index == RETRO_DEVICE_INDEX_ANALOG_RIGHT)
 					{
 						if (var->id == RETRO_DEVICE_ID_ANALOG_X)id = 18;
 						if (var->id == RETRO_DEVICE_ID_ANALOG_Y)id = 19;
+						input_device->bl->add(keyboard, i, str.GetBuffer(NULL), id);
 					}
 				}
-				input_device->bl->add(keyboard,i,str.GetBuffer(NULL), id);
+				else if (var->device == RETRO_DEVICE_JOYPAD)
+				{
+					input_device->bl->add(keyboard, i, str.GetBuffer(NULL), id);
+				}
+				
 				i++;
 				++var;
 			}
@@ -429,13 +435,13 @@ static int16_t core_input_state(unsigned port, unsigned device, unsigned index, 
 			{
 				if (device == RETRO_DEVICE_ANALOG)
 				{
-					if (index == RETRO_DEVICE_INDEX_ANALOG_LEFT || RETRO_DEVICE_INDEX_ANALOG_RIGHT)
+					if (index == RETRO_DEVICE_INDEX_ANALOG_LEFT)
 					{
 						int retro_id = 0;
-						signed value = 0;
+						int16_t value = 0;
 						input_device->getbutton(i, value, retro_id);
-						if (value <= -0x8000)value = -0x7fff;
-						if (value >= 0x8000)value = 0x7fff;
+						if (value <= -0x7fff)value = -0x7fff;
+						if (value >= 0x7fff)value = 0x7fff;
 						if (id == RETRO_DEVICE_ID_ANALOG_X && retro_id == 16 || id == RETRO_DEVICE_ID_ANALOG_Y && retro_id == 17)
 						{	
 							return value;
@@ -445,7 +451,7 @@ static int16_t core_input_state(unsigned port, unsigned device, unsigned index, 
 				else if(device == RETRO_DEVICE_JOYPAD)
 				{
 					int retro_id;
-					int value = 0;
+					int16_t value = 0;
 					input_device->getbutton(i, value, retro_id);
 					if (retro_id == id)return value;
 				}
