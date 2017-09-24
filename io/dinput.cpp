@@ -72,9 +72,6 @@ class dinput_i : public dinput
 
 	tGetRawInputDeviceList   pGetRawInputDeviceList;
 	tGetRawInputDeviceInfoW  pGetRawInputDeviceInfoW;
-
-	#define XINPUT_GAMEPAD_LEFT_THUMB_DEADZONE  8192
-
 	static bool xinput_left_stick_motion( SHORT previous, SHORT current, di_event::axis_motion * motion_out )
 	{
 		di_event::axis_motion current_motion;
@@ -496,11 +493,11 @@ public:
 
 				e.xinput.index = i;
 				e.xinput.type = di_event::xinput_axis;
-				e.xinput.value = 0;
-
+				//e.xinput.value = 0;
+				
 #define XINPUT_PUSH_AXIS(n, stick, v) \
 				e.xinput.which = n; \
-				e.xinput.value = ((xinput_##stick##_stick_deadzone(state.Gamepad.##v))); \
+				e.xinput.value = ((xinput_##stick##_stick_deadzone(state.Gamepad.##v)));\
 				if ( xinput_##stick##_stick_motion( xinput_last_state[ i ].Gamepad.##v, state.Gamepad.##v, &e.xinput.axis ) ) events.push_back( e )
 
 				XINPUT_PUSH_AXIS( 0, left, sThumbLX );
@@ -523,7 +520,6 @@ public:
 #undef XINPUT_PUSH_TRIGGER
 
 				e.xinput.type = di_event::xinput_button;
-				e.xinput.value = 0;
 
 				for ( unsigned button = 0, mask = 1; button < 14; ++button, mask <<= 1 )
 				{

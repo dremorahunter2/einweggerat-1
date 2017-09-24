@@ -421,12 +421,14 @@ static void core_video_refresh(const void *data, unsigned width, unsigned height
 
 
 static void core_input_poll(void) {
+	input *input_device = input::GetSingleton();
 	
 }
 
 static int16_t core_input_state(unsigned port, unsigned device, unsigned index, unsigned id) {
 	if (port != 0)return 0;
 	input *input_device = input::GetSingleton();
+	input_device->poll();
 	if (input_device->bl != NULL)
 	{
 		
@@ -438,11 +440,16 @@ static int16_t core_input_state(unsigned port, unsigned device, unsigned index, 
 					{
 						int retro_id = 0;
 						int16_t value = 0;
-						input_device->getbutton(i, value, retro_id);
+						bool isanalog = false;
+						input_device->getbutton(i, value, retro_id,isanalog);
 						if (value <= -0x7fff)value = -0x7fff;
 						if (value >= 0x7fff)value = 0x7fff;
 						if(id == RETRO_DEVICE_ID_ANALOG_X && retro_id == 16)return value;
-						if(id == RETRO_DEVICE_ID_ANALOG_Y && retro_id == 17)return value;
+						if (id == RETRO_DEVICE_ID_ANALOG_Y && retro_id == 17)
+						{
+							int16_t var = isanalog ? value : -value;
+							return var;
+						}
 					}
 				}
 				else if(device == RETRO_DEVICE_JOYPAD)
@@ -737,8 +744,7 @@ void CLibretro::run()
 		glClearColor(0, 0, 0, 1);
 		glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
 		_samplesCount = 0;
-		input *input_device = input::GetSingleton();
-		input_device->poll();
+		
 		while (!_samplesCount)
 		{
 			g_retro.retro_run();
