@@ -5,7 +5,7 @@
 #include <assert.h>
 
 #include <windows.h>
-
+#include <cmath>
 #include "abstract_file.h"
 
 
@@ -420,7 +420,7 @@ public:
 								itb->e.joy.type == dinput::di_event::joy_axis &&
 								itb->e.joy.which == it->joy.which )
 							{
-								if ( it->joy.axis != itb->e.joy.axis && it->joy.axis != dinput::di_event::axis_center) release( itb->action, it->joy.value );
+								if ( it->joy.axis != itb->e.joy.axis && it->joy.axis) release( itb->action, it->joy.value );
 							}
 						}
 						for ( itb = list.begin(); itb < list.end(); ++itb )
@@ -430,7 +430,7 @@ public:
 								itb->e.joy.type == dinput::di_event::joy_axis &&
 								itb->e.joy.which == it->joy.which )
 							{
-								if ( it->joy.axis == itb->e.joy.axis && it->joy.axis != dinput::di_event::axis_center) press(itb->action, it->joy.value);
+								if ( it->joy.axis == itb->e.joy.axis && it->joy.axis) press(itb->action, it->joy.value);
 							}
 						}
 					}
@@ -470,17 +470,30 @@ public:
 								itb->e.xinput.type == dinput::di_event::xinput_axis &&
 								itb->e.xinput.which == it->xinput.which )
 							{
-								if ( it->xinput.axis != itb->e.xinput.axis )release(itb->action, it->joy.value);
+								{
+									if (it->xinput.axis != itb->e.xinput.axis)
+									{
+										if(it->xinput.which & 1)release(itb->action, (it->joy.axis == dinput::di_event::axis_positive) ? (abs((int)it->joy.value)) : -it->joy.value);
+										else release(itb->action, it->joy.value);
+									}
+								}
+
+								
 							}
 						}
 						for ( itb = list.begin(); itb < list.end(); ++itb )
 						{
-							if ( itb->e.type == dinput::di_event::ev_xinput &&
+							if (itb->e.type == dinput::di_event::ev_xinput &&
 								itb->e.xinput.index == it->xinput.index &&
 								itb->e.xinput.type == dinput::di_event::xinput_axis &&
-								itb->e.xinput.which == it->xinput.which )
+								itb->e.xinput.which == it->xinput.which)
 							{
-								if (it->xinput.axis == itb->e.xinput.axis) press(itb->action, it->joy.value);
+								if (it->xinput.axis == itb->e.xinput.axis)
+								{
+									if (it->xinput.which & 1)press(itb->action, (it->joy.axis == dinput::di_event::axis_negative) ? (abs((int)it->joy.value)) : -it->joy.value);
+									else press(itb->action, it->joy.value);
+								}
+
 							}
 						}
 					}
