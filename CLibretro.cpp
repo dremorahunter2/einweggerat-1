@@ -428,28 +428,24 @@ static void core_input_poll(void) {
 static int16_t core_input_state(unsigned port, unsigned device, unsigned index, unsigned id) {
 	if (port != 0)return 0;
 	input *input_device = input::GetSingleton();
-	input_device->poll();
 	if (input_device->bl != NULL)
 	{
-		
+		input_device->poll();
 		for (unsigned int i = 0; i < input_device->bl->get_count(); i++) {
 			{
 				if (device == RETRO_DEVICE_ANALOG)
 				{
-					if (index == RETRO_DEVICE_INDEX_ANALOG_LEFT)
+					int retro_id = 0;
+					int16_t value = 0;
+					bool isanalog = false;
+					input_device->getbutton(i, value, retro_id, isanalog);
+					if (value <= -0x7fff)value = -0x7fff;
+					if (value >= 0x7fff)value = 0x7fff;
+					if (id == RETRO_DEVICE_ID_ANALOG_X && retro_id == 16 || id == RETRO_DEVICE_ID_ANALOG_X && retro_id == 18)return value;
+					if (id == RETRO_DEVICE_ID_ANALOG_Y && retro_id == 17 || id == RETRO_DEVICE_ID_ANALOG_Y && retro_id == 19)
 					{
-						int retro_id = 0;
-						int16_t value = 0;
-						bool isanalog = false;
-						input_device->getbutton(i, value, retro_id,isanalog);
-						if (value <= -0x7fff)value = -0x7fff;
-						if (value >= 0x7fff)value = 0x7fff;
-						if(id == RETRO_DEVICE_ID_ANALOG_X && retro_id == 16)return value;
-						if (id == RETRO_DEVICE_ID_ANALOG_Y && retro_id == 17)
-						{
-							int16_t var = isanalog ? -value : value;
-							return var;
-						}
+						int16_t var = isanalog ? -value : value;
+						return var;
 					}
 				}
 				else if(device == RETRO_DEVICE_JOYPAD)
