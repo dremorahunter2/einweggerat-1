@@ -438,22 +438,18 @@ public:
 					{
 						e.joy.type = di_event::joy_axis;
 						e.joy.which = (od.dwOfs - DIJOFS_X) / (DIJOFS_Y - DIJOFS_X);
-
-
+						e.joy.value = od.dwData;
 						if (od.dwData < 0x8000 - 4096)
 						{
 							e.joy.axis = di_event::axis_negative;
-							e.joy.value = od.dwData;
 						}
 						else if (od.dwData > 0x8000 + 4096)
 						{
 							e.joy.axis = di_event::axis_positive;
-							e.joy.value = od.dwData;
 						}
 						else
 						{
 							e.joy.axis = di_event::axis_center;
-							//e.joy.value = 0;
 						}
 						
 						events.push_back( e );
@@ -493,8 +489,6 @@ public:
 
 				e.xinput.index = i;
 				e.xinput.type = di_event::xinput_axis;
-				//e.xinput.value = 0;
-				
 #define XINPUT_PUSH_AXIS(n, stick, v) \
 				e.xinput.which = n; \
 				e.xinput.value = ((xinput_##stick##_stick_deadzone(state.Gamepad.##v)));\

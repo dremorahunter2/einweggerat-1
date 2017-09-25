@@ -422,6 +422,8 @@ static void core_video_refresh(const void *data, unsigned width, unsigned height
 
 static void core_input_poll(void) {
 	input *input_device = input::GetSingleton();
+	if(input_device->bl != NULL)
+		input_device->poll();
 	
 }
 
@@ -450,10 +452,11 @@ static int16_t core_input_state(unsigned port, unsigned device, unsigned index, 
 				}
 				else if(device == RETRO_DEVICE_JOYPAD)
 				{
-					int retro_id;
+					int retro_id = 0;
 					int16_t value = 0;
 					bool isanalog=false;
 					input_device->getbutton(i, value, retro_id,isanalog);
+					value = abs(value);
 					if (retro_id == id)return value;
 				}
 			}
@@ -608,10 +611,10 @@ bool CLibretro::loadfile(char* filename)
 	AttachConsole(GetCurrentProcessId());
 	freopen("CON", "w", stdout);
 	
-core_load(_T("cores/parallel_n64_libretro.dll"));
-	filename = "sm64.z64";
-	//core_load(_T("cores/snes9x_libretro.dll"));
-	//filename = "smw.sfc";
+	//core_load(_T("cores/parallel_n64_libretro.dll"));
+	//filename = "sm64.z64";
+	core_load(_T("cores/snes9x_libretro.dll"));
+	filename = "smw.sfc";
 	struct retro_game_info info = { filename, 0 };
 	FILE *Input = fopen(filename, "rb");
 	if (!Input) return(NULL);

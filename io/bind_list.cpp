@@ -54,7 +54,10 @@ class bind_list_i : public bind_list
 	{
 		assert(which < list.size());
 		list[which].status = false;
-		list[which].value = value;
+		if(list[which].retro_id < 16)
+		list[which].value = 0;
+		else list[which].value = value;
+		
 	}
 
 public:
@@ -494,7 +497,6 @@ public:
 								{
 									if (it->xinput.axis != itb->e.xinput.axis)
 									{
-										//if(it->xinput.which & 1)release(itb->action, (it->joy.axis == dinput::di_event::axis_negative) ? (abs((int)it->joy.value)) : -it->joy.value);
 										 release(itb->action, it->joy.value);
 									}
 								}
@@ -511,7 +513,7 @@ public:
 							{
 								if (it->xinput.axis == itb->e.xinput.axis)
 								{
-									//if (it->xinput.which & 1)press(itb->action, (it->joy.axis == dinput::di_event::axis_negative) ? (abs((int)it->joy.value)) : -it->joy.value);
+							
 									press(itb->action, it->joy.value);
 								}
 
