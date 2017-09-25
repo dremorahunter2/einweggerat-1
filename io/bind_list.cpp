@@ -114,14 +114,13 @@ public:
 			b.retro_id = retro_id;
 			lstrcpy(b.description, description);
 			b.isxinput_y = false;
-			if (e.xinput.type == dinput::di_event::xinput_axis)
+			if (e.type == dinput::di_event::ev_xinput)
 			{
-				if (e.xinput.which & 1)
+				if (e.xinput.which & 1 && e.xinput.type == dinput::di_event::xinput_axis)
 				{
 					b.isxinput_y = true;
 				}
 			}
-
 			list.push_back( b );
 
 
@@ -213,9 +212,12 @@ public:
 				b.action = action;
 				b.retro_id = retro_id;
 				b.isxinput_y = false;
-				if (e.xinput.type == dinput::di_event::xinput_axis)
+				if (e.type == dinput::di_event::ev_xinput)
 				{
-					if (e.xinput.which & 1) b.isxinput_y = true;
+					if (e.xinput.which & 1 && e.xinput.type == dinput::di_event::xinput_axis)
+					{
+						b.isxinput_y = true;
+					}
 				}
 				lstrcpy(b.description, description);
 			}
@@ -224,11 +226,7 @@ public:
 				b.e = list2.at(i).e;
 				b.action = list2.at(i).action;
 				b.retro_id = list2.at(i).retro_id;
-				b.isxinput_y = false;
-				if (e.xinput.type == dinput::di_event::xinput_axis)
-				{
-					if (e.xinput.which & 1) b.isxinput_y = true;
-				}
+				b.isxinput_y = list2.at(i).isxinput_y;
 				lstrcpy(b.description, list2.at(i).description);
 			}
 			if (guids->get_guid(b.e.joy.serial, guid))

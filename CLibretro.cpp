@@ -447,7 +447,7 @@ static int16_t core_input_state(unsigned port, unsigned device, unsigned index, 
 						if(id == RETRO_DEVICE_ID_ANALOG_X && retro_id == 16)return value;
 						if (id == RETRO_DEVICE_ID_ANALOG_Y && retro_id == 17)
 						{
-							int16_t var = isanalog ? value : -value;
+							int16_t var = isanalog ? -value : value;
 							return var;
 						}
 					}
@@ -456,7 +456,8 @@ static int16_t core_input_state(unsigned port, unsigned device, unsigned index, 
 				{
 					int retro_id;
 					int16_t value = 0;
-					input_device->getbutton(i, value, retro_id);
+					bool isanalog=false;
+					input_device->getbutton(i, value, retro_id,isanalog);
 					if (retro_id == id)return value;
 				}
 			}
