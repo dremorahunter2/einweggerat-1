@@ -260,6 +260,7 @@
   </ItemGroup>
   <ItemGroup>
     <Image Include="emu_wtl.ico" />
+    <Image Include="gui\bitmap1.bmp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

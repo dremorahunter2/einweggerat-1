@@ -411,7 +411,7 @@ private:
 class CMyWindow : public CFrameWindowImpl<CMyWindow>, public CDropFileTarget<CMyWindow>,public CMessageFilter
 {
 public:
-	DECLARE_FRAME_WND_CLASS ( _T("emu_wtl"), IDR_MAINFRAME );
+	DECLARE_FRAME_WND_CLASS ( _T("emu_wtl"), NULL);
 	BEGIN_MSG_MAP_EX(CMyWindow)
 		MESSAGE_HANDLER(WM_CREATE, OnCreate)
 		MESSAGE_HANDLER(WM_DESTROY, OnDestroy)
@@ -420,17 +420,62 @@ public:
 		COMMAND_ID_HANDLER_EX(IDC_EXIT, OnFileExit)
 		COMMAND_ID_HANDLER(ID_FILE_OPEN, OnFileOpen)
 		COMMAND_ID_HANDLER_EX(IDC_ABOUT, OnAbout)
+		COMMAND_ID_HANDLER(ID_LOADSTATEFILE,OnLoadState)
+		COMMAND_ID_HANDLER(ID_SAVESTATEFILE, OnSaveState)
+		COMMAND_ID_HANDLER(ID_RESET, OnReset)
 		CHAIN_MSG_MAP(CFrameWindowImpl<CMyWindow>)
 		CHAIN_MSG_MAP(CDropFileTarget<CMyWindow>)
 		END_MSG_MAP()
 
 		CLibretro *emulator;
 		input*    input_device;
+		HACCEL    m_haccelerator;
+		LRESULT OnLoadState(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
+		{
+			CHAR szFileName[MAX_PATH];
+			LPCTSTR sFiles =
+				L"Savestates (*.state)\0*.state\0"
+				L"All Files (*.*)\0*.*\0\0";
+			CFileDialog dlg(TRUE, NULL, NULL, OFN_HIDEREADONLY | OFN_OVERWRITEPROMPT, sFiles);
+			if (dlg.DoModal() == IDOK)
+			{
+				emulator->savestate(dlg.m_szFileName);
+				// do stuff
+			}
 
+			return 0;
+		}
 
+		LRESULT OnReset(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
+		{
+			emulator->reset();
+
+			return 0;
+		}
+
+		LRESULT OnSaveState(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
+		{
+			CHAR szFileName[MAX_PATH];
+			LPCTSTR sFiles =
+				L"Savestates (*.state)\0*.state\0"
+				L"All Files (*.*)\0*.*\0\0";
+			CFileDialog dlg(FALSE, L"*.state", NULL, OFN_HIDEREADONLY | OFN_OVERWRITEPROMPT, sFiles);
+			if (dlg.DoModal() == IDOK)
+			{
+				emulator->savestate(dlg.m_szFileName,true);
+				// do stuff
+			}
+			return 0;
+		}
 
 		BOOL PreTranslateMessage(MSG* pMsg)
 		{
+			if (m_haccelerator != NULL)
+			{
+				if (::TranslateAccelerator(m_hWnd, m_haccelerator, pMsg))
+					return TRUE;
+			}
+
 			return CWindow::IsDialogMessage(pMsg);
 		}
 
@@ -476,7 +521,11 @@ public:
 			bHandled = FALSE;
 			input_device = input::CreateInstance(GetModuleHandle(NULL), m_hWnd);
 			emulator = CLibretro::CreateInstance(m_hWnd ) ;
-			
+			m_haccelerator = AtlLoadAccelerators(IDR_ACCELERATOR1);
+			pLoop->AddMessageFilter(this);
+			AllocConsole();
+			AttachConsole(GetCurrentProcessId());
+			freopen("CON", "w", stdout);
 
 			RegisterDropTarget();
 			SetRedraw(FALSE);

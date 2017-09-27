@@ -14,7 +14,7 @@
 using namespace std;
 using namespace utf8util;
 
-#define SAMPLE_COUNT 8192
+#define SAMPLE_COUNT 6144
 #define INLINE 
 
 static mal_uint32 sdl_audio_callback(mal_device* pDevice, mal_uint32 frameCount, void* pSamples)
@@ -27,14 +27,15 @@ static mal_uint32 sdl_audio_callback(mal_device* pDevice, mal_uint32 frameCount,
 }
 
 mal_uint32 Audio::fill_buffer(uint8_t* out, mal_uint32 count) {
-	std::unique_lock<std::mutex> lck(lock);
+	std::lock_guard<std::mutex> lk(lock);
+	
 	size_t avail = fifo_read_avail(_fifo);
 	if (avail)
 	{
+		
 		avail = count > avail ? avail : count;
 		fifo_read(_fifo, out, avail);
 		memset(out + avail, 0, count - avail);
-		lck.unlock();
 		buffer_full.notify_all();
 		return avail;
 	}
@@ -55,7 +56,7 @@ mal_uint32 Audio::fill_buffer(uint8_t* out, mal_uint32 count) {
 			return false;
 		}
 		config = mal_device_config_init_playback(mal_format_s16, 2,_sampleRate, ::sdl_audio_callback);
-		config.bufferSizeInFrames = 1024;
+		config.bufferSizeInFrames =1024;
 		_fifo = fifo_new(SAMPLE_COUNT);
 		if (mal_device_init(&context, mal_device_type_playback, NULL, &config, this, &device) != MAL_SUCCESS) {
 			mal_context_uninit(&context);
@@ -142,9 +143,9 @@ static struct {
 	void(*retro_set_controller_port_device)(unsigned port, unsigned device);
 	void(*retro_reset)(void);
 	void(*retro_run)(void);
-	//	size_t retro_serialize_size(void);
-	//	bool retro_serialize(void *data, size_t size);
-	//	bool retro_unserialize(const void *data, size_t size);
+	size_t (*retro_serialize_size)(void);
+	bool (*retro_serialize)(void *data, size_t size);
+	bool (*retro_unserialize)(const void *data, size_t size);
 	//	void retro_cheat_reset(void);
 	//	void retro_cheat_set(unsigned index, bool enabled, const char *code);
 	bool(*retro_load_game)(const struct retro_game_info *game);
@@ -475,6 +476,45 @@ void CLibretro::core_audio_sample(int16_t left, int16_t right)
 	}
 }
 
+bool CLibretro::savestate(TCHAR* filename, bool save)
+{
+	if (isEmulating)
+	{
+		size_t size = g_retro.retro_serialize_size();
+		if (save)
+		{
+			FILE *Input = _wfopen(filename, L"wb");
+			if (!Input) return(NULL);
+			// Get the filesize
+			BYTE *Memory = (BYTE *)malloc(size);
+			g_retro.retro_serialize(Memory, size);
+			fwrite(Memory, 1, size, Input);
+			fclose(Input);
+			Input = NULL;
+			return true;
+
+		}
+		else
+		{
+			FILE *Input = _wfopen(filename, L"rb");
+			fseek(Input, 0, SEEK_END);
+			int Size = ftell(Input);
+			fseek(Input, 0, SEEK_SET);
+			BYTE *Memory = (BYTE *)malloc(Size);
+			fread(Memory, 1, Size, Input);
+			g_retro.retro_unserialize(Memory, size);
+			if (Input) fclose(Input);
+			Input = NULL;
+			return true;
+		}
+	}
+	return false;
+}
+
+void CLibretro::reset()
+{
+	if(isEmulating)g_retro.retro_reset();
+}
 
 size_t CLibretro::core_audio_sample_batch(const int16_t *data, size_t frames)
 {
@@ -524,6 +564,10 @@ bool core_load(TCHAR *sofile) {
 	load_retro_sym(retro_run);
 	load_retro_sym(retro_load_game);
 	load_retro_sym(retro_unload_game);
+	load_retro_sym(retro_serialize);
+	load_retro_sym(retro_unserialize);
+	load_retro_sym(retro_serialize_size);
+
 
 	load_sym(set_environment, retro_set_environment);
 	load_sym(set_video_refresh, retro_set_video_refresh);
@@ -607,9 +651,7 @@ bool CLibretro::loadfile(char* filename)
 	g_video.hw.context_reset = NULL;
 	g_video.hw.context_destroy = NULL;
 
-	AllocConsole();
-	AttachConsole(GetCurrentProcessId());
-	freopen("CON", "w", stdout);
+	
 	
 	//core_load(_T("cores/parallel_n64_libretro.dll"));
 	//filename = "sm64.z64";

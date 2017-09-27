@@ -16,6 +16,7 @@
 #define IDD_Z64SETTINGS1                129
 #define IDI_ICON1                       134
 #define IDD_VARIABLES                   135
+#define IDR_ACCELERATOR1                138
 #define IDC_LIST_ASSIGN                 1000
 #define IDC_APPVER                      1001
 #define IDC_ADD                         1001
@@ -93,13 +94,16 @@
 #define ID_PREFERENCES_INPUTCONFIG      40034
 #define ID_OPTIONS_COREOPTIONS          40035
 #define ID_ABOUT                        40036
+#define ID_SAVESTATEFILE                40039
+#define ID_LOADSTATEFILE                40045
+#define ID_RESET                        40048
 
 // Next default values for new objects
 // 
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
-#define _APS_NEXT_RESOURCE_VALUE        137
-#define _APS_NEXT_COMMAND_VALUE         40037
+#define _APS_NEXT_RESOURCE_VALUE        139
+#define _APS_NEXT_COMMAND_VALUE         40050
 #define _APS_NEXT_CONTROL_VALUE         1192
 #define _APS_NEXT_SYMED_VALUE           101
 #endif

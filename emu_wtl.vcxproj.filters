@@ -105,6 +105,7 @@
   </ItemGroup>
   <ItemGroup>
     <Image Include="emu_wtl.ico" />
+    <Image Include="gui\bitmap1.bmp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="gui\emu_wtl.ico" />

@@ -54,15 +54,6 @@ MENU_MAINFRAME MENU
 BEGIN
     POPUP "&File"
     BEGIN
-        MENUITEM "Load State",                  ID_OPTIONS_LOADSTATE
-        MENUITEM "Save State",                  ID_OPTIONS_SAVESTATE
-        MENUITEM "Pause/Resume",                ID_OPTIONS_PAUSE
-        POPUP "Reset"
-        BEGIN
-            MENUITEM "Soft",                        ID_RESET_SOFTRESET
-            MENUITEM "Hard",                        ID_RESET_HARDRESET
-        END
-        MENUITEM SEPARATOR
         MENUITEM "E&xit",                       IDC_EXIT
     END
     POPUP "Options"
@@ -249,6 +240,19 @@ END
 // Icon with lowest ID value placed first to ensure application icon
 // remains consistent on all systems.
 IDI_ICON1               ICON                    "emu_wtl.ico"
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Accelerator
+//
+
+IDR_ACCELERATOR1 ACCELERATORS
+BEGIN
+    VK_F1,          ID_LOADSTATEFILE,       VIRTKEY, NOINVERT
+    VK_F2,          ID_SAVESTATEFILE,       VIRTKEY, NOINVERT
+    VK_F3,          ID_RESET,               VIRTKEY, NOINVERT
+END
 
 #endif    // English (Australia) resources
 /////////////////////////////////////////////////////////////////////////////

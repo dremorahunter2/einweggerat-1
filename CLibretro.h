@@ -72,7 +72,9 @@ public:
 	void splash();
 	void render();
 	void run();
+	void reset();
 	bool init(HWND hwnd);
+	bool savestate(TCHAR* filename, bool save = false);
 	void kill();
 	BOOL isEmulating;
 
