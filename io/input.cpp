@@ -125,7 +125,7 @@ input::~input()
 
 	void input::poll()
 	{
-		if(bl != NULL)bl->process( di->read() );
+		if(bl != nullptr)bl->process( di->read() );
 	}
 
 	bool input::getbutton(int which, int16_t & value, int & retro_id, bool & isanalog)

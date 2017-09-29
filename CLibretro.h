@@ -20,7 +20,16 @@ extern "C" {
 
 	class Audio
 	{
+	
 	public:
+	Audio(double srate)
+	{
+		init(srate);
+	}
+	~Audio()
+	{
+		destroy();
+	}
 	bool init(unsigned sample_rate);
 	void destroy();
 	void reset();
@@ -42,6 +51,7 @@ extern "C" {
 	std::mutex lock;
 	bool buf_ready;
 	std::condition_variable buffer_full;
+	std::condition_variable buffer_empty;
 	};
 
 class CLibretro
@@ -63,6 +73,7 @@ public:
 	double target_fps;
 	double target_samplerate;
 	DWORD rate;
+	bool paused;
 	std::list<double> listDeltaMA;
 	bool sync_video_tick(void);
 	unsigned frame_count;

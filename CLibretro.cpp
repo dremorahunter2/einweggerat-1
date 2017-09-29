@@ -27,20 +27,22 @@ static mal_uint32 sdl_audio_callback(mal_device* pDevice, mal_uint32 frameCount,
 }
 
 mal_uint32 Audio::fill_buffer(uint8_t* out, mal_uint32 count) {
-	std::lock_guard<std::mutex> lk(lock);
-	
+	std::lock_guard<std::mutex> lg(mutex);	
 	size_t avail = fifo_read_avail(_fifo);
 	if (avail)
 	{
 		
 		avail = count > avail ? avail : count;
 		fifo_read(_fifo, out, avail);
-		memset(out + avail, 0, count - avail);
+		memset(out + avail, 0, count - avail);	
 		buffer_full.notify_all();
 		return avail;
 	}
 	return 0;
 }
+
+
+
 	bool Audio::init(unsigned sample_rate)
 	{
 		_opened = true;
@@ -101,13 +103,13 @@ mal_uint32 Audio::fill_buffer(uint8_t* out, mal_uint32 count) {
 	}
 	void Audio::mix(const int16_t* samples, size_t frames)
 	{
+		buf_ready = false;
 		//_samples = samples;
 		_frames = frames;
 		uint32_t in_len = frames * 2;
 		uint32_t out_len = trunc((uint32_t)(in_len * _sampleRate / _coreRate))+1;
 
 		int16_t* output = (int16_t*)alloca(out_len * 2);
-		
 		if (output == NULL)
 		{
 			return;
@@ -121,12 +123,11 @@ mal_uint32 Audio::fill_buffer(uint8_t* out, mal_uint32 count) {
 		{
 			memcpy(output, samples, out_len * 2);
 		}
-		
 		int size = out_len * 2;
 		std::unique_lock<std::mutex> l(lock);
 		buffer_full.wait(l, [this, size]() {return size < fifo_write_avail(_fifo); });
-		
 		fifo_write(_fifo, output, size);
+		
 	}
 
 
@@ -480,6 +481,7 @@ bool CLibretro::savestate(TCHAR* filename, bool save)
 {
 	if (isEmulating)
 	{
+		paused = true;
 		size_t size = g_retro.retro_serialize_size();
 		if (save)
 		{
@@ -491,6 +493,7 @@ bool CLibretro::savestate(TCHAR* filename, bool save)
 			fwrite(Memory, 1, size, Input);
 			fclose(Input);
 			Input = NULL;
+			paused = false;
 			return true;
 
 		}
@@ -505,6 +508,7 @@ bool CLibretro::savestate(TCHAR* filename, bool save)
 			g_retro.retro_unserialize(Memory, size);
 			if (Input) fclose(Input);
 			Input = NULL;
+			paused = false;
 			return true;
 		}
 	}
@@ -654,7 +658,7 @@ bool CLibretro::loadfile(char* filename)
 	
 	
 	//core_load(_T("cores/parallel_n64_libretro.dll"));
-	//filename = "sm64.z64";
+//	filename = "sm64.z64";
 	core_load(_T("cores/snes9x_libretro.dll"));
 	filename = "smw.sfc";
 	struct retro_game_info info = { filename, 0 };
@@ -713,23 +717,20 @@ DWORD WINAPI CLibretro::libretro_thread(void* Param)
 	{
 		orig_ratio = (double)lpDevMode.dmDisplayFrequency / av.timing.fps;
 	}
-	double sampleRate = av.timing.sample_rate * orig_ratio;
 	This->_samples = (int16_t*)malloc(SAMPLE_COUNT);
 	memset(This->_samples, 0, SAMPLE_COUNT);
-	This->_audio = new Audio();
-	This->_audio->init(sampleRate);
-
+	This->_audio = new Audio(av.timing.sample_rate * orig_ratio);
 	This->isEmulating = true;
 	This->listDeltaMA.clear();
 	This->frame_count = 0;
 	This->fps = 0;
+	This->paused = false;
 
 	This->run();
 
 	g_retro.retro_unload_game();
 	g_retro.retro_deinit();
-	This->_audio->destroy();
-	delete[] This->_audio;
+	delete []This->_audio;
 	video_deinit();
 
 	return 0;
@@ -787,10 +788,14 @@ void CLibretro::run()
 		glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
 		_samplesCount = 0;
 		
-		while (!_samplesCount)
+		if (!paused)
 		{
-			g_retro.retro_run();
-		}
+			while (!_samplesCount)
+			{
+				g_retro.retro_run();
+			}
+		
+		
 	
 	
 	//	sync_video_tick();
@@ -812,6 +817,7 @@ void CLibretro::run()
 			_audio->setRate(sampleRate);
 		}*/
 		_audio->mix(_samples, _samplesCount / 2);
+		}
 	}
 	
 }

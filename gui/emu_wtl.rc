@@ -52,13 +52,8 @@ END
 
 MENU_MAINFRAME MENU
 BEGIN
-    POPUP "&File"
-    BEGIN
-        MENUITEM "E&xit",                       IDC_EXIT
-    END
     POPUP "Options"
     BEGIN
-        MENUITEM "Paths",                       ID_PREFERENCES_PATHS
         MENUITEM "Core input",                  ID_PREFERENCES_INPUTCONFIG
         MENUITEM "Core variables",              ID_PREFERENCES_COREVARIABLES
     END
