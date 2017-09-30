@@ -205,9 +205,6 @@
     <ClInclude Include="gui\Resource.h" />
     <ClInclude Include="gui\utf8conv.h" />
     <ClInclude Include="io\abstract_file.h" />
-    <ClInclude Include="io\audio\arch.h" />
-    <ClInclude Include="io\audio\speex_resampler.h" />
-    <ClInclude Include="io\audio\stack_alloc.h" />
     <ClInclude Include="io\bind_list.h" />
     <ClInclude Include="io\blargg_common.h" />
     <ClInclude Include="io\blargg_config.h" />
@@ -232,7 +229,6 @@
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|x64'">..\StdAfx.h</PrecompiledHeaderFile>
     </ClCompile>
     <ClCompile Include="io\abstract_file.cpp" />
-    <ClCompile Include="io\audio\resample.c" />
     <ClCompile Include="io\bind_list.cpp" />
     <ClCompile Include="io\blargg_common.cpp" />
     <ClCompile Include="io\blargg_errors.cpp" />
@@ -243,7 +239,6 @@
     <ClCompile Include="io\guid_container.cpp" />
     <ClCompile Include="io\input.cpp" />
     <ClCompile Include="libretro-common-master\queues\fifo_queue.c" />
-    <ClCompile Include="libretro-common-master\rthreads\rthreads.c" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>

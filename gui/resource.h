@@ -97,13 +97,17 @@
 #define ID_SAVESTATEFILE                40039
 #define ID_LOADSTATEFILE                40045
 #define ID_RESET                        40048
+#define ID_LOADSTATE1                   40051
+#define ID_LOADSTATE2                   40052
+#define ID_SAVESTATE1                   40053
+#define ID_SAVESTATE2                   40054
 
 // Next default values for new objects
 // 
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NEXT_RESOURCE_VALUE        139
-#define _APS_NEXT_COMMAND_VALUE         40050
+#define _APS_NEXT_COMMAND_VALUE         40056
 #define _APS_NEXT_CONTROL_VALUE         1192
 #define _APS_NEXT_SYMED_VALUE           101
 #endif

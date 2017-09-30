@@ -33,8 +33,7 @@ extern "C" {
 	bool init(unsigned sample_rate);
 	void destroy();
 	void reset();
-	bool setRate(double rate);
-	void mix(const int16_t* samples, size_t frames);
+	void mix(const int16_t* samples, size_t frames,int64_t fps);
 	mal_uint32 fill_buffer(uint8_t* pSamples, mal_uint32 samplecount);
 	mal_context context;
 	mal_device device;
@@ -61,6 +60,15 @@ private:
 	static	CLibretro* m_Instance ;
 	
 public:
+	struct core_vars
+	{
+		std::string name;
+		std::string var;
+		std::string description;
+		std::string usevars;
+	};
+	std::vector<core_vars> variables;
+	bool variables_changed;
 	HANDLE thread_handle;
 	DWORD thread_id;
 	HWND emulator_hwnd;

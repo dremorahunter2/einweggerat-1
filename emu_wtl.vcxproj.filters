@@ -34,14 +34,8 @@
     <ClCompile Include="io\Data_Reader.cpp">
       <Filter>io</Filter>
     </ClCompile>
-    <ClCompile Include="io\audio\resample.c">
-      <Filter>io\resample</Filter>
-    </ClCompile>
     <ClCompile Include="libretro-common-master\queues\fifo_queue.c">
-      <Filter>io\resample</Filter>
-    </ClCompile>
-    <ClCompile Include="libretro-common-master\rthreads\rthreads.c">
-      <Filter>io\resample</Filter>
+      <Filter>io</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -90,15 +84,6 @@
     <ClInclude Include="io\Data_Reader.h">
       <Filter>io</Filter>
     </ClInclude>
-    <ClInclude Include="io\audio\arch.h">
-      <Filter>io\resample</Filter>
-    </ClInclude>
-    <ClInclude Include="io\audio\speex_resampler.h">
-      <Filter>io\resample</Filter>
-    </ClInclude>
-    <ClInclude Include="io\audio\stack_alloc.h">
-      <Filter>io\resample</Filter>
-    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="gui\emu_wtl.rc" />
@@ -119,9 +104,6 @@
     </Filter>
     <Filter Include="io">
       <UniqueIdentifier>{d1bc58e8-62ef-4db2-9c8a-646c5f894846}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="io\resample">
-      <UniqueIdentifier>{65f0343b-8f74-4c00-a39c-6b102f3f47c5}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
 </Project>

@@ -6,7 +6,7 @@
 #include "DlgTabCtrl.h"
 #include "utf8conv.h"
 #include <cmath>
-
+#include "PropertyGrid.h"
 #include <iostream>
 #include <string>
 #include <sstream>
@@ -15,6 +15,14 @@
 using namespace std;
 using namespace utf8util;
 
+#define PGS_EX_SINGLECLICKEDIT   0x00000001
+#define PGS_EX_NOGRID            0x00000002
+#define PGS_EX_TABNAVIGATION     0x00000004
+#define PGS_EX_NOSHEETNAVIGATION 0x00000008
+#define PGS_EX_FULLROWSELECT     0x00000010
+#define PGS_EX_INVERTSELECTION   0x00000020
+#define PGS_EX_ADDITEMATEND      0x00000040
+
 namespace std
 {
 	typedef wstring        tstring;
@@ -22,22 +30,95 @@ namespace std
 	typedef wostringstream tostringstream;
 }
 
-class CVideoView : public CDialogImpl<CVideoView>
+class CVariablesView : public CDialogImpl<CVariablesView>
 {
 public:
 	HWND m_hwndOwner; 
-	enum { IDD = IDD_VIDEO };
-	BEGIN_MSG_MAP(CVideoView)
+	enum { IDD = IDD_VARIABLES };
+	BEGIN_MSG_MAP(CVariablesView)
+		COMMAND_ID_HANDLER(IDCANCEL, OnCancel)
+		COMMAND_ID_HANDLER(IDOK, OnOK)
 		MESSAGE_HANDLER(WM_INITDIALOG, OnInitDialogView1)
+		NOTIFY_CODE_HANDLER(PIN_SELCHANGED, OnSelChanged);
+	NOTIFY_CODE_HANDLER(PIN_ITEMCHANGED, OnItemChanged);
+	NOTIFY_CODE_HANDLER(PIN_ADDITEM, OnAddItem);
+	REFLECT_NOTIFICATIONS()
 	END_MSG_MAP()
+	CPropertyGridCtrl m_grid;
+
+
+	LRESULT OnAddItem(int idCtrl, LPNMHDR /*pnmh*/, BOOL& /*bHandled*/)
+	{
+		ATLTRACE(_T("OnAddItem - Ctrl: %d\n"), idCtrl); idCtrl;
+
+		int i = m_grid.InsertItem(-1, PropCreateReadOnlyItem(_T(""), _T("Dolly")));
+		m_grid.SetSubItem(i, 1, PropCreateSimple(_T(""), true));
+		m_grid.SetSubItem(i, 2, PropCreateCheckButton(_T(""), false));
+		m_grid.SetSubItem(i, 3, PropCreateSimple(_T(""), _T("")));
+		m_grid.SelectItem(i);
+		return 0;
+	}
+
+	LRESULT OnSelChanged(int idCtrl, LPNMHDR pnmh, BOOL& /*bHandled*/)
+	{
+		LPNMPROPERTYITEM pnpi = (LPNMPROPERTYITEM)pnmh;
+		if (pnpi->prop == NULL) return 0;
+		TCHAR szValue[100] = { 0 };
+		pnpi->prop->GetDisplayValue(szValue, sizeof(szValue) / sizeof(TCHAR));
+		CComVariant vValue;
+		pnpi->prop->GetValue(&vValue);
+		vValue.ChangeType(VT_BSTR);
+		ATLTRACE(_T("OnSelChanged - Ctrl: %d, Name: '%s', DispValue: '%s', Value: '%ls'\n"),
+			idCtrl, pnpi->prop->GetName(), szValue, vValue.bstrVal); idCtrl;
+		return 0;
+	}
+
+	LRESULT OnItemChanged(int idCtrl, LPNMHDR pnmh, BOOL& /*bHandled*/)
+	{
+		LPNMPROPERTYITEM pnpi = (LPNMPROPERTYITEM)pnmh;
+		TCHAR szValue[100] = { 0 };
+		pnpi->prop->GetDisplayValue(szValue, sizeof(szValue) / sizeof(TCHAR));
+		CComVariant vValue;
+		pnpi->prop->GetValue(&vValue);
+		vValue.ChangeType(VT_BSTR);
+		ATLTRACE(_T("OnItemChanged - Ctrl: %d, Name: '%s', DispValue: '%s', Value: '%ls'\n"),
+			idCtrl, pnpi->prop->GetName(), szValue, vValue.bstrVal); idCtrl;
+		return 0;
+	}
+
 
 	LRESULT OnInitDialogView1(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 	{
+
+
+
+
+		LPCTSTR boolvar[] = { _T("enabled"), _T("disabled"), NULL };
+		m_grid.SubclassWindow(GetDlgItem(IDC_LIST_VARIABLES));
+
+		m_grid.InsertColumn(0, _T("Variable"), LVCFMT_LEFT, 200, 0);
+		m_grid.InsertColumn(1, _T("Value"), LVCFMT_LEFT, 80, 0);
+
+		m_grid.SetExtendedGridStyle(PGS_EX_SINGLECLICKEDIT);
+		LPCTSTR pList[] = { _T("White"), _T("Brown"), _T("Pink"), _T("Yellow"), NULL };
+		m_grid.InsertItem(0, PropCreateReadOnlyItem(_T(""), _T("Raymond")));
+		m_grid.SetSubItem(0,1,PropCreateList(_T("Skin"), pList));
+
+
+		HPROPERTY hBeth = PropCreateReadOnlyItem(_T(""), _T("Beth"));
+		m_grid.InsertItem(1, hBeth);
+		m_grid.SetSubItem(1, 1, PropCreateSimple(_T(""), true));
+
+		m_grid.InsertItem(2, PropCreateReadOnlyItem(_T(""), _T("Caroline")));
+		m_grid.SetSubItem(2, 1, PropCreateSimple(_T(""), false));
+
 		return TRUE;
 	}
 
 	LRESULT OnOK(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 	{
+		CLibretro * lib = CLibretro::GetSingleton();
+		lib->variables_changed = true;
 		// TODO: Add validation code
 		EndDialog(wID);
 		return 0;
@@ -417,6 +498,7 @@ public:
 		MESSAGE_HANDLER(WM_DESTROY, OnDestroy)
 		MESSAGE_HANDLER(WM_SIZE,OnSize)
 		COMMAND_ID_HANDLER(ID_PREFERENCES_INPUTCONFIG, OnInput)
+		COMMAND_ID_HANDLER(ID_PREFERENCES_COREVARIABLES, OnVariables)
 		COMMAND_ID_HANDLER_EX(IDC_EXIT, OnFileExit)
 		COMMAND_ID_HANDLER(ID_FILE_OPEN, OnFileOpen)
 		COMMAND_ID_HANDLER_EX(IDC_ABOUT, OnAbout)
@@ -566,6 +648,14 @@ public:
 		LRESULT OnInput(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/ )
 		{
 			CInputView dlg;
+			dlg.DoModal();
+
+			return 0;
+		}
+
+		LRESULT OnVariables(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
+		{
+			CVariablesView dlg;
 			dlg.DoModal();
 
 			return 0;

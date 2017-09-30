@@ -51,8 +51,7 @@ mal_uint32 Audio::fill_buffer(uint8_t* out, mal_uint32 count) {
 		_samples = NULL;
 		_coreRate = 0;
 		_resampler = NULL;
-		_sampleRate = 44100;
-		setRate(sample_rate);
+		_sampleRate = sample_rate;
 		if (mal_context_init(NULL, 0, &context) != MAL_SUCCESS) {
 			printf("Failed to initialize context.");
 			return false;
@@ -72,10 +71,6 @@ mal_uint32 Audio::fill_buffer(uint8_t* out, mal_uint32 count) {
 		{
 			mal_device_stop(&device);
 			mal_context_uninit(&context);
-			if (_resampler != NULL)
-			{
-				speex_resampler_destroy(_resampler);
-			}
 		}
 	}
 	void Audio::reset()
@@ -83,46 +78,19 @@ mal_uint32 Audio::fill_buffer(uint8_t* out, mal_uint32 count) {
 
 	}
 
-	bool Audio::setRate(double rate)
-	{
-		if (_resampler != NULL)
-		{
-			speex_resampler_destroy(_resampler);
-			_resampler = NULL;
-		}
-
-		_coreRate = floor(rate + 0.5);
-
-		if (_coreRate != _sampleRate)
-		{
-			int error;
-			_resampler = speex_resampler_init(2, _coreRate, _sampleRate, SPEEX_RESAMPLER_QUALITY_DESKTOP, &error);
-		}
-		return true;
-
-	}
-	void Audio::mix(const int16_t* samples, size_t frames)
+	void Audio::mix(const int16_t* samples, size_t frames, int64_t fps)
 	{
 		buf_ready = false;
 		//_samples = samples;
 		_frames = frames;
 		uint32_t in_len = frames * 2;
-		uint32_t out_len = trunc((uint32_t)(in_len * _sampleRate / _coreRate))+1;
-
+		uint32_t out_len = in_len;
 		int16_t* output = (int16_t*)alloca(out_len * 2);
 		if (output == NULL)
 		{
 			return;
 		}
-
-		if (_resampler != NULL)
-		{
-			int error = speex_resampler_process_int(_resampler, 0, samples, &in_len, output, &out_len);
-		}
-		else
-		{
-			memcpy(output, samples, out_len * 2);
-		}
+		memcpy(output, samples, out_len * 2);
 		int size = out_len * 2;
 		std::unique_lock<std::mutex> l(lock);
 		buffer_full.wait(l, [this, size]() {return size < fifo_write_avail(_fifo); });
@@ -208,16 +176,26 @@ void init_coresettings(retro_variable *var)
 	lstrcat(buffer, _T(".ini"));
 	FILE *fp = NULL;
 	fp = _wfopen(buffer, L"r");
+	CLibretro *retro = CLibretro::GetSingleton();
+	
 	if (!fp)
 	{
 		//create a new file with defaults
 		ini_t* ini = ini_create(NULL);
 		while (var->key && var->value)
 		{
+			CLibretro::core_vars vars_struct;
+			vars_struct.name = var->key;
+			
+			char descript[50] = { 0 };
+			char *e = strchr((char*)var->value, ';');
+			strncpy(descript, var->value, (int)(e - (char*)var->value));
+			vars_struct.description = descript;
+
 			char * pch = strstr((char*)var->value, (char*)"; ");
 			pch += strlen("; ");
 			int vars = 0;
-
+			vars_struct.usevars = pch;
 			while (pch != NULL)
 			{
 				char val[255] = { 0 };
@@ -229,6 +207,7 @@ void init_coresettings(retro_variable *var)
 				}
 				strncpy(val, pch, str2 - pch);
 				if (!vars) {
+					vars_struct.var = val;
 					ini_property_add(ini, INI_GLOBAL_SECTION, var->key, strlen(var->key), val, strlen(val));
 					char val_comment[255] = { 0 };
 					strcpy(val_comment, var->key);
@@ -237,7 +216,9 @@ void init_coresettings(retro_variable *var)
 				}
 				pch += str2 - pch++;
 				vars++;
+				
 			}
+			retro->variables.push_back(vars_struct);
 			++var;
 		}
 		int size = ini_save(ini, NULL, 0); // Find the size needed
@@ -251,7 +232,41 @@ void init_coresettings(retro_variable *var)
 		free(data);
 	}
 	else
-	{
+	{	
+		while (var->key && var->value)
+		{
+			CLibretro::core_vars vars_struct;
+			vars_struct.name = var->key;
+
+			char descript[50] = { 0 };
+			char *e = strchr((char*)var->value, ';');
+			strncpy(descript, var->value, (int)(e - (char*)var->value));
+			vars_struct.description = descript;
+
+			char * pch = strstr((char*)var->value, (char*)"; ");
+			pch += strlen("; ");
+			int vars = 0;
+			vars_struct.usevars = pch;
+			while (pch != NULL)
+			{
+				char val[255] = { 0 };
+				char* str2 = strstr(pch, (char*)"|");
+				if (!str2)
+				{
+					strcpy(val, pch);
+					break;
+				}
+				strncpy(val, pch, str2 - pch);
+				if (!vars) {
+					vars_struct.var = val;
+				}
+				pch += str2 - pch++;
+				vars++;
+
+			}
+			retro->variables.push_back(vars_struct);
+			++var;
+		}
 		fclose(fp);
 	}
 }
@@ -273,6 +288,9 @@ const char* load_coresettings(retro_variable *var)
 	fclose(fp);
 	ini_t* ini = ini_load(data,NULL);
 	free(data);
+
+
+
 	int second_index = ini_find_property(ini, INI_GLOBAL_SECTION, (char*)var->key,strlen(var->key));
 	const char* variable_val = ini_property_value(ini, INI_GLOBAL_SECTION, second_index);
 	if (variable_val == NULL)
@@ -281,7 +299,7 @@ const char* load_coresettings(retro_variable *var)
 		return NULL;
 	}
 	strcpy(variable_val2, variable_val);
-	ini_destroy(ini);
+	ini_destroy(ini);                             
 	return variable_val2;
 }
 
@@ -395,6 +413,15 @@ bool core_environment(unsigned cmd, void *data) {
 		return true;
 	}
 	break;
+	case RETRO_ENVIRONMENT_GET_VARIABLE_UPDATE:
+	{
+	CLibretro *retro = CLibretro::GetSingleton();
+	*(bool*)data = retro->variables_changed;
+	retro->variables_changed = false;
+	return true;
+	}
+	break;
+		
 	case RETRO_ENVIRONMENT_SET_PIXEL_FORMAT: {
 		const enum retro_pixel_format *fmt = (enum retro_pixel_format *)data;
 		if (*fmt > RETRO_PIXEL_FORMAT_RGB565)
@@ -690,7 +717,8 @@ bool CLibretro::loadfile(char* filename)
 	if (info.data)
 	free((void*)info.data);
 
-	
+
+	variables_changed = false;
 	thread_handle = CreateThread(NULL, 0, libretro_thread, (void*) this, 0, &thread_id);
 	
 	return isEmulating;
@@ -787,37 +815,21 @@ void CLibretro::run()
 		glClearColor(0, 0, 0, 1);
 		glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
 		_samplesCount = 0;
-		
 		if (!paused)
 		{
-			while (!_samplesCount)
+			while (!_samplesCount )
 			{
 				g_retro.retro_run();
 			}
-		
-		
-	
-	
-	//	sync_video_tick();
-	//	retro_time_t avg = getDeltaMovingAverage(fps);
-	
-		/*
-		int available = fifo_write_avail(_audio->_fifo);
-		int total = SAMPLE_COUNT;
-		int low_water_size = (unsigned)(total * 3 / 4);
-		assert(total != 0);
-		int half = total / 2;
-		int delta_half = available - half;
-		double adjust = 1.0 + 0.005 * ((double)delta_half / half);
-		if (avg < 60 && (available < low_water_size)) {
-			retro_system_av_info av = { 0 };
-			g_retro.retro_get_system_av_info(&av);
-			double sampleRate = av.timing.sample_rate * adjust;
-			//double sampleRate = av.timing.sample_rate * refreshRate / av.timing.fps;
-			_audio->setRate(sampleRate);
-		}*/
-		_audio->mix(_samples, _samplesCount / 2);
 		}
+		
+		
+	
+	
+		sync_video_tick();
+		retro_time_t avg = getDeltaMovingAverage(fps);
+		_audio->mix(_samples, _samplesCount / 2,avg);
+		
 	}
 	
 }
