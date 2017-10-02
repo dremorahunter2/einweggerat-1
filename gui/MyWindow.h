@@ -136,6 +136,8 @@ public:
 
 			}
 		}
+		save();
+		retro->variables_changed = true;
 		return 0;
 	}
 
@@ -216,10 +218,8 @@ public:
 		return TRUE;
 	}
 
-
-	LRESULT OnOK(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
+	void save()
 	{
-		CLibretro *retro = CLibretro::GetSingleton();
 		char variable_val2[50] = { 0 };
 		TCHAR buffer[MAX_PATH] = { 0 };
 		lstrcpy(buffer, retro->corepath);
@@ -248,10 +248,15 @@ public:
 		fclose(fp);
 		free(data2);
 		ini_destroy(ini);
+	}
+
+	LRESULT OnOK(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
+	{
+		save();
 
 
 
-		retro->variables_changed = true;
+		
 
 		// TODO: Add validation code
 		EndDialog(wID);
