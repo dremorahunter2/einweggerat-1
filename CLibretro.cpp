@@ -14,7 +14,7 @@
 using namespace std;
 using namespace utf8util;
 
-#define SAMPLE_COUNT 6144
+#define SAMPLE_COUNT 8192
 #define INLINE 
 
 static mal_uint32 sdl_audio_callback(mal_device* pDevice, mal_uint32 frameCount, void* pSamples)
@@ -68,10 +68,8 @@ mal_uint32 Audio::fill_buffer(uint8_t* out, mal_uint32 count) {
 	}
 	void Audio::destroy()
 	{
-		{
-			mal_device_stop(&device);
-			mal_context_uninit(&context);
-		}
+		mal_device_uninit(&device);
+		mal_context_uninit(&context);	
 	}
 	void Audio::reset()
 	{
@@ -81,21 +79,11 @@ mal_uint32 Audio::fill_buffer(uint8_t* out, mal_uint32 count) {
 	void Audio::mix(const int16_t* samples, size_t frames, int64_t fps)
 	{
 		buf_ready = false;
-		//_samples = samples;
-		_frames = frames;
-		uint32_t in_len = frames * 2;
-		uint32_t out_len = in_len;
-		int16_t* output = (int16_t*)alloca(out_len * 2);
-		if (output == NULL)
-		{
-			return;
-		}
-		memcpy(output, samples, out_len * 2);
-		int size = out_len * 2;
+		if (!frames)return;
+		uint32_t in_len = frames * 2 * sizeof(int16_t);
 		std::unique_lock<std::mutex> l(lock);
-		buffer_full.wait(l, [this, size]() {return size < fifo_write_avail(_fifo); });
-		fifo_write(_fifo, output, size);
-		
+		buffer_full.wait(l, [this, in_len]() {return in_len < fifo_write_avail(_fifo); });
+		fifo_write(_fifo, samples, in_len);
 	}
 
 
@@ -272,10 +260,10 @@ void init_coresettings(retro_variable *var)
 }
 const char* load_coresettings(retro_variable *var)
 {
+	CLibretro *retro = CLibretro::GetSingleton();
 	char variable_val2[50] = { 0 };
 	TCHAR buffer[MAX_PATH] = { 0 };
-	GetModuleFileName(g_retro.handle, buffer, MAX_PATH);
-	PathRemoveExtension(buffer);
+	lstrcpy(buffer,retro->corepath);
 	lstrcat(buffer, _T(".ini"));
 	FILE *fp = NULL;
 	fp = _wfopen(buffer, L"r");
@@ -288,9 +276,6 @@ const char* load_coresettings(retro_variable *var)
 	fclose(fp);
 	ini_t* ini = ini_load(data,NULL);
 	free(data);
-
-
-
 	int second_index = ini_find_property(ini, INI_GLOBAL_SECTION, (char*)var->key,strlen(var->key));
 	const char* variable_val = ini_property_value(ini, INI_GLOBAL_SECTION, second_index);
 	if (variable_val == NULL)
@@ -299,17 +284,11 @@ const char* load_coresettings(retro_variable *var)
 		return NULL;
 	}
 	strcpy(variable_val2, variable_val);
-	ini_destroy(ini);                             
+	ini_destroy(ini);
 	return variable_val2;
 }
 
-std::wstring s2ws(const std::string& str)
-{
-	int size_needed = MultiByteToWideChar(CP_UTF8, 0, &str[0], (int)str.size(), NULL, 0);
-	std::wstring wstrTo(size_needed, 0);
-	MultiByteToWideChar(CP_UTF8, 0, &str[0], (int)str.size(), &wstrTo[0], size_needed);
-	return wstrTo;
-}
+
 
 bool core_environment(unsigned cmd, void *data) {
 	bool *bval;
@@ -674,6 +653,7 @@ bool CLibretro::loadfile(char* filename)
 {
 	if (isEmulating)isEmulating = false;
 	struct retro_system_info system = {0};
+
 	
 	g_video = { 0 };
 	g_video.hw.version_major = 3;
@@ -681,13 +661,15 @@ bool CLibretro::loadfile(char* filename)
 	g_video.hw.context_type = RETRO_HW_CONTEXT_OPENGL_CORE;
 	g_video.hw.context_reset = NULL;
 	g_video.hw.context_destroy = NULL;
-
+	variables_changed = false;
 	
 	
 	//core_load(_T("cores/parallel_n64_libretro.dll"));
-//	filename = "sm64.z64";
+	//filename = "sm64.z64";
 	core_load(_T("cores/snes9x_libretro.dll"));
-	filename = "smw.sfc";
+	GetModuleFileName(g_retro.handle, corepath, MAX_PATH);
+	PathRemoveExtension(corepath);
+	filename = "skb.sfc";
 	struct retro_game_info info = { filename, 0 };
 	FILE *Input = fopen(filename, "rb");
 	if (!Input) return(NULL);
@@ -718,7 +700,7 @@ bool CLibretro::loadfile(char* filename)
 	free((void*)info.data);
 
 
-	variables_changed = false;
+	
 	thread_handle = CreateThread(NULL, 0, libretro_thread, (void*) this, 0, &thread_id);
 	
 	return isEmulating;

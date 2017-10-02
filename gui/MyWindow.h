@@ -11,6 +11,7 @@
 #include <string>
 #include <sstream>
 #include <iomanip>
+#include "../ini.h"
 
 using namespace std;
 using namespace utf8util;
@@ -30,6 +31,23 @@ namespace std
 	typedef wostringstream tostringstream;
 }
 
+std::wstring s2ws(const std::string& str)
+{
+	int size_needed = MultiByteToWideChar(CP_UTF8, 0, &str[0], (int)str.size(), NULL, 0);
+	std::wstring wstrTo(size_needed, 0);
+	MultiByteToWideChar(CP_UTF8, 0, &str[0], (int)str.size(), &wstrTo[0], size_needed);
+	return wstrTo;
+}
+
+std::string ws2s(const std::wstring &wstr)
+{
+	if (wstr.empty()) return std::string();
+	int size_needed = WideCharToMultiByte(CP_UTF8, 0, &wstr[0], (int)wstr.size(), NULL, 0, NULL, NULL);
+	std::string strTo(size_needed, 0);
+	WideCharToMultiByte(CP_UTF8, 0, &wstr[0], (int)wstr.size(), &strTo[0], size_needed, NULL, NULL);
+	return strTo;
+}
+
 class CVariablesView : public CDialogImpl<CVariablesView>
 {
 public:
@@ -45,7 +63,7 @@ public:
 	REFLECT_NOTIFICATIONS()
 	END_MSG_MAP()
 	CPropertyGridCtrl m_grid;
-
+	CLibretro *retro;
 
 	LRESULT OnAddItem(int idCtrl, LPNMHDR /*pnmh*/, BOOL& /*bHandled*/)
 	{
@@ -76,49 +94,165 @@ public:
 	LRESULT OnItemChanged(int idCtrl, LPNMHDR pnmh, BOOL& /*bHandled*/)
 	{
 		LPNMPROPERTYITEM pnpi = (LPNMPROPERTYITEM)pnmh;
-		TCHAR szValue[100] = { 0 };
-		pnpi->prop->GetDisplayValue(szValue, sizeof(szValue) / sizeof(TCHAR));
-		CComVariant vValue;
-		pnpi->prop->GetValue(&vValue);
-		vValue.ChangeType(VT_BSTR);
-		ATLTRACE(_T("OnItemChanged - Ctrl: %d, Name: '%s', DispValue: '%s', Value: '%ls'\n"),
-			idCtrl, pnpi->prop->GetName(), szValue, vValue.bstrVal); idCtrl;
+		int type =pnpi->prop->GetKind();
+		LPCTSTR* name = (LPCTSTR*)pnpi->prop->GetName();
+		if (type == 4)
+		{
+			TCHAR szValue[100] = { 0 };
+			pnpi->prop->GetDisplayValue(szValue, sizeof(szValue) / sizeof(TCHAR));
+			CComVariant vValue;
+			pnpi->prop->GetValue(&vValue);
+			vValue.ChangeType(VT_BSTR);
+			ATLTRACE(_T("OnItemChanged - Ctrl: %d, Name: '%s', DispValue: '%s', Value: '%ls'\n"),
+				idCtrl, pnpi->prop->GetName(), szValue, vValue.bstrVal); idCtrl;
+
+			for (int i = 0; i < retro->variables.size(); i++)
+			{
+				wstring str = s2ws(retro->variables[i].name);
+				if (lstrcmpW(str.c_str(), (LPCTSTR)name) == 0)
+				{
+					wstring var = szValue;
+					retro->variables[i].var = ws2s(var);
+				}
+
+			}
+		}
+		if (type == 6)
+		{
+			CComVariant vValue;
+			pnpi->prop->GetValue(&vValue);
+			vValue.ChangeType(VT_BOOL);
+			for (int i = 0; i < retro->variables.size(); i++)
+			{
+				wstring str = s2ws(retro->variables[i].name);
+				wstring str2 = (LPCTSTR)name;
+				if (lstrcmp(str.c_str(), str2.c_str()) == 0)
+				{
+					const char* str = vValue.boolVal ? "enabled" : "disabled";
+					std::stringstream temp;
+					temp << str;
+					retro->variables[i].var = temp.str();
+				}
+
+			}
+		}
 		return 0;
 	}
 
 
 	LRESULT OnInitDialogView1(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 	{
-
-
-
-
-		LPCTSTR boolvar[] = { _T("enabled"), _T("disabled"), NULL };
+		retro = CLibretro::GetSingleton();
 		m_grid.SubclassWindow(GetDlgItem(IDC_LIST_VARIABLES));
-
-		m_grid.InsertColumn(0, _T("Variable"), LVCFMT_LEFT, 200, 0);
-		m_grid.InsertColumn(1, _T("Value"), LVCFMT_LEFT, 80, 0);
-
+		m_grid.InsertColumn(0, _T("Option"), LVCFMT_LEFT, 200, 0);
+		m_grid.InsertColumn(1, _T("Setting"), LVCFMT_LEFT, 80, 0);
 		m_grid.SetExtendedGridStyle(PGS_EX_SINGLECLICKEDIT);
-		LPCTSTR pList[] = { _T("White"), _T("Brown"), _T("Pink"), _T("Yellow"), NULL };
-		m_grid.InsertItem(0, PropCreateReadOnlyItem(_T(""), _T("Raymond")));
-		m_grid.SetSubItem(0,1,PropCreateList(_T("Skin"), pList));
 
+		for (int i = 0; i < retro->variables.size(); i++)
+		{
+			string str = retro->variables[i].description;
+			wstring st2 = s2ws(str);
+			string usedv = retro->variables[i].usevars;
+			string var = retro->variables[i].var;
+			wstring varname = s2ws(retro->variables[i].name);
+			m_grid.InsertItem(i, PropCreateReadOnlyItem(_T(""), st2.c_str()));
+			if (strstr(usedv.c_str(), "enabled") || strstr(usedv.c_str(), "disabled"))
+			{
+				bool check = strstr((char*)var.c_str(), "enabled");
+				m_grid.SetSubItem(i, 1, PropCreateCheckButton(varname.c_str(),check));
+			}
+			else
+			{
+				
+				vector <wstring> colour;
+				colour.clear();
+				char *pch = (char*)retro->variables[i].usevars.c_str();
+				while (pch != NULL)
+				{
+					char val[255] = { 0 };
+					char* str2 = strstr(pch, (char*)"|");
+					if (!str2)
+					{
+						strcpy(val, pch);
+						break;
+					}
+					strncpy(val, pch, str2 - pch);
+					std::wostringstream temp;
+					temp << val;
+					colour.push_back(temp.str());
+					pch += str2 - pch++;
 
-		HPROPERTY hBeth = PropCreateReadOnlyItem(_T(""), _T("Beth"));
-		m_grid.InsertItem(1, hBeth);
-		m_grid.SetSubItem(1, 1, PropCreateSimple(_T(""), true));
+				}
+				std::wostringstream temp;
+				temp << pch;
+				colour.push_back(temp.str());
+				
+				LPWSTR **wszArray = new LPWSTR*[colour.size() + 1];
+				int j = 0;
+				for (j; j < colour.size();j++) {
+					wszArray[j] = new LPWSTR[colour[j].length()];
+					lstrcpy((LPWSTR)wszArray[j], colour[j].c_str());
+					
+				}
+				wszArray[j] = NULL;
 
-		m_grid.InsertItem(2, PropCreateReadOnlyItem(_T(""), _T("Caroline")));
-		m_grid.SetSubItem(2, 1, PropCreateSimple(_T(""), false));
+				
+				m_grid.SetSubItem(i, 1, PropCreateList(varname.c_str(), (LPCTSTR*)wszArray));
+				HPROPERTY hDisabled = m_grid.GetProperty(i, 1);
+				TCHAR szValue[100] = { 0 };
+				hDisabled->GetDisplayValue(szValue, sizeof(szValue) / sizeof(TCHAR));
+				wstring variant = s2ws(retro->variables[i].var);
+				CComVariant vValue(variant.c_str());
+				vValue.ChangeType(VT_BSTR);
+				m_grid.SetItemValue(hDisabled, &vValue);
+				
+			}
+
+		//	m_grid.SetSubItem(i, 1, PropCreateList(_T("Skin"), boolvar));
+			
+
+		}
 
 		return TRUE;
 	}
 
+
 	LRESULT OnOK(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 	{
-		CLibretro * lib = CLibretro::GetSingleton();
-		lib->variables_changed = true;
+		CLibretro *retro = CLibretro::GetSingleton();
+		char variable_val2[50] = { 0 };
+		TCHAR buffer[MAX_PATH] = { 0 };
+		lstrcpy(buffer, retro->corepath);
+		lstrcat(buffer, _T(".ini"));
+		FILE *fp = NULL;
+		fp = _wfopen(buffer, L"r");
+		fseek(fp, 0, SEEK_END);
+		int size = ftell(fp);
+		fseek(fp, 0, SEEK_SET);
+		char* data = (char*)malloc(size + 1);
+		fread(data, 1, size, fp);
+		data[size] = '\0';
+		fclose(fp);
+		ini_t* ini = ini_load(data, NULL);
+		free(data);
+		for (int i = 0; i < retro->variables.size(); i++)
+		{
+			int second_index = ini_find_property(ini, INI_GLOBAL_SECTION, (char*)retro->variables[i].name.c_str(), retro->variables[i].name.length());
+			ini_property_value_set(ini, INI_GLOBAL_SECTION, second_index, (char*)retro->variables[i].var.c_str(), retro->variables[i].name.length());
+		}
+		size = ini_save(ini, NULL, 0); // Find the size needed
+		char* data2 = (char*)malloc(size);
+		size = ini_save(ini, data2, size); // Actually save the file	
+		fp = _wfopen(buffer, L"w");
+		fwrite(data2, 1, size, fp);
+		fclose(fp);
+		free(data2);
+		ini_destroy(ini);
+
+
+
+		retro->variables_changed = true;
+
 		// TODO: Add validation code
 		EndDialog(wID);
 		return 0;

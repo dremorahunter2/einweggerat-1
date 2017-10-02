@@ -6,7 +6,6 @@
 #define IDCANCEL2                       4
 #define IDD_ABOUT                       104
 #define IDD_SETTINGS                    112
-#define IDD_PATHS                       112
 #define IDD_INPUT                       113
 #define IDD_DIALOG1                     114
 #define IDD_VIDEO                       114
@@ -33,16 +32,8 @@
 #define IDC_AUDIOPLUGIN                 1010
 #define IDC_INPUTPLUGIN                 1011
 #define IDC_RSPPLUGIN                   1012
-#define IDC_SSHOTS                      1020
-#define IDC_SSHOTSDIR                   1021
-#define IDC_SSTATES                     1022
-#define IDC_SSTATESDIR                  1023
 #define IDC_SDATA                       1026
 #define IDC_SDATADIR                    1027
-#define IDC_PLUGINS                     1028
-#define IDC_PLUGINSDIR                  1029
-#define IDC_ROMS                        1031
-#define IDC_ROMSDIR                     1032
 #define IDC_MUPENAPICRED                1040
 #define IDC_FEXCRED                     1041
 #define IDC_SDLCRED                     1042

@@ -14,6 +14,13 @@
 #include "libretro-common-master/include/queues/fifo_queue.h"
 #include "libretro-common-master/include/rthreads/rthreads.h"
 
+namespace std
+{
+	typedef wstring        tstring;
+	typedef wistringstream tistringstream;
+	typedef wostringstream tostringstream;
+}
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -67,6 +74,7 @@ public:
 		std::string description;
 		std::string usevars;
 	};
+	TCHAR corepath[MAX_PATH];
 	std::vector<core_vars> variables;
 	bool variables_changed;
 	HANDLE thread_handle;
