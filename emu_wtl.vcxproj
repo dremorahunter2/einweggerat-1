@@ -80,7 +80,7 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
-    <IncludePath>C:\codecrack\src\wtl\include;C:\codecrack\code\gitmudlord\libretro_player\libretro-common-master\include;$(IncludePath)</IncludePath>
+    <IncludePath>C:\codecrack\src\wtl\include;C:\codecrack\code\github\libretro_loader\libretro-common-master\include;$(IncludePath)</IncludePath>
     <LibraryPath>$(LibraryPath)</LibraryPath>
     <PreBuildEventUseInBuild>false</PreBuildEventUseInBuild>
   </PropertyGroup>
@@ -126,7 +126,7 @@
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <OutputFile>out\emu_wtl.exe</OutputFile>
+      <OutputFile>out_x64\libretro_loader.exe</OutputFile>
       <AdditionalDependencies>d2d1.lib;xinput.lib;dxguid.lib;winmm.lib;dsound.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PreBuildEvent>
@@ -150,11 +150,11 @@
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
-      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <GenerateDebugInformation>false</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <OutputFile>out\emu_wtl.exe</OutputFile>
-      <AdditionalDependencies>d2d1.lib;xinput.lib;winmm.lib;dxguid.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <OutputFile>out_x86\libretro_loader.exe</OutputFile>
+      <AdditionalDependencies>winmm.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PreBuildEvent>
       <Command>SubWCRev.exe $(SolutionDir) $(ProjectDir)\svn_version.txt $(ProjectDir)\svn_version.h</Command>
@@ -180,7 +180,7 @@
       <GenerateDebugInformation>false</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <OutputFile>out\libretro_loader.exe</OutputFile>
+      <OutputFile>out_x64\libretro_loader.exe</OutputFile>
       <AdditionalDependencies>xinput.lib;dxguid.lib;dsound.lib;Xaudio2.lib;winmm.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PreBuildEvent>

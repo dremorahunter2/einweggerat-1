@@ -197,10 +197,6 @@ void init_coresettings(retro_variable *var)
 				if (!vars) {
 					vars_struct.var = val;
 					ini_property_add(ini, INI_GLOBAL_SECTION, var->key, strlen(var->key), val, strlen(val));
-					char val_comment[255] = { 0 };
-					strcpy(val_comment, var->key);
-					strcat(val_comment, ".usedvars");
-					ini_property_add(ini, INI_GLOBAL_SECTION, val_comment, strlen(val_comment), pch, strlen(pch));
 				}
 				pch += str2 - pch++;
 				vars++;
@@ -213,7 +209,6 @@ void init_coresettings(retro_variable *var)
 		char* data = (char*)malloc(size);
 		size = ini_save(ini, data, size); // Actually save the file
 		ini_destroy(ini);
-
 		fp = _wfopen(buffer, L"w");
 		fwrite(data, 1, size, fp);
 		fclose(fp);
@@ -221,71 +216,50 @@ void init_coresettings(retro_variable *var)
 	}
 	else
 	{	
+		fseek(fp, 0, SEEK_END);
+		int size = ftell(fp);
+		fseek(fp, 0, SEEK_SET);
+		char* data = (char*)malloc(size + 1);
+		fread(data, 1, size, fp);
+		data[size] = '\0';
+		fclose(fp);
+		ini_t* ini = ini_load(data, NULL);
+		free(data);
 		while (var->key && var->value)
 		{
 			CLibretro::core_vars vars_struct;
 			vars_struct.name = var->key;
-
 			char descript[50] = { 0 };
 			char *e = strchr((char*)var->value, ';');
 			strncpy(descript, var->value, (int)(e - (char*)var->value));
 			vars_struct.description = descript;
-
 			char * pch = strstr((char*)var->value, (char*)"; ");
 			pch += strlen("; ");
 			int vars = 0;
 			vars_struct.usevars = pch;
-			while (pch != NULL)
-			{
-				char val[255] = { 0 };
-				char* str2 = strstr(pch, (char*)"|");
-				if (!str2)
-				{
-					strcpy(val, pch);
-					break;
-				}
-				strncpy(val, pch, str2 - pch);
-				if (!vars) {
-					vars_struct.var = val;
-				}
-				pch += str2 - pch++;
-				vars++;
-
-			}
+			int second_index = ini_find_property(ini, INI_GLOBAL_SECTION, (char*)var->key, strlen(var->key));
+			const char* variable_val = ini_property_value(ini, INI_GLOBAL_SECTION, second_index);
+			vars_struct.var = variable_val;
 			retro->variables.push_back(vars_struct);
 			++var;
 		}
-		fclose(fp);
+		ini_destroy(ini);
 	}
 }
+
 const char* load_coresettings(retro_variable *var)
 {
 	CLibretro *retro = CLibretro::GetSingleton();
-	char variable_val2[50] = { 0 };
-	TCHAR buffer[MAX_PATH] = { 0 };
-	lstrcpy(buffer,retro->corepath);
-	lstrcat(buffer, _T(".ini"));
-	FILE *fp = NULL;
-	fp = _wfopen(buffer, L"r");
-	fseek(fp, 0, SEEK_END);
-	int size = ftell(fp);
-	fseek(fp, 0, SEEK_SET);
-	char* data = (char*)malloc(size + 1);
-	fread(data, 1, size, fp);
-	data[size] = '\0';
-	fclose(fp);
-	ini_t* ini = ini_load(data,NULL);
-	free(data);
-	int second_index = ini_find_property(ini, INI_GLOBAL_SECTION, (char*)var->key,strlen(var->key));
-	const char* variable_val = ini_property_value(ini, INI_GLOBAL_SECTION, second_index);
-	if (variable_val == NULL)
+	for (int i = 0; i < retro->variables.size(); i++)
 	{
-		ini_destroy(ini);
-		return NULL;
+		if (strcmp(retro->variables[i].name.c_str(), var->key) == 0)
+		{
+			char variable_val2[50] = { 0 };
+			strcpy(variable_val2, (const char*)retro->variables[i].var.c_str());
+			return variable_val2;
+		}
 	}
-	strcpy(variable_val2, variable_val);
-	ini_destroy(ini);
-	return variable_val2;
+	return NULL;
 }
 
 

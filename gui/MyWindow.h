@@ -136,7 +136,6 @@ public:
 
 			}
 		}
-		save();
 		retro->variables_changed = true;
 		return 0;
 	}
@@ -207,12 +206,12 @@ public:
 				CComVariant vValue(variant.c_str());
 				vValue.ChangeType(VT_BSTR);
 				m_grid.SetItemValue(hDisabled, &vValue);
-				
+
+				for (j = 0; j < colour.size(); j++) {
+					free(wszArray[j]);
+				}
+				free(wszArray);	
 			}
-
-		//	m_grid.SetSubItem(i, 1, PropCreateList(_T("Skin"), boolvar));
-			
-
 		}
 
 		return TRUE;
@@ -220,7 +219,6 @@ public:
 
 	void save()
 	{
-		char variable_val2[50] = { 0 };
 		TCHAR buffer[MAX_PATH] = { 0 };
 		lstrcpy(buffer, retro->corepath);
 		lstrcat(buffer, _T(".ini"));
@@ -253,11 +251,6 @@ public:
 	LRESULT OnOK(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 	{
 		save();
-
-
-
-		
-
 		// TODO: Add validation code
 		EndDialog(wID);
 		return 0;

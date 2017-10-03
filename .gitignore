@@ -5,6 +5,7 @@
 /exe/
 /out/
 /out_x86/
+/out_x64/
 /.vs/
 /ipch/
 UpgradeLog.htm
