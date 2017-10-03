@@ -31,7 +31,6 @@ mal_uint32 Audio::fill_buffer(uint8_t* out, mal_uint32 count) {
 	size_t avail = fifo_read_avail(_fifo);
 	if (avail)
 	{
-		
 		avail = count > avail ? avail : count;
 		fifo_read(_fifo, out, avail);
 		memset(out + avail, 0, count - avail);	
@@ -569,6 +568,7 @@ bool core_load(TCHAR *sofile) {
 
 	g_retro.retro_init();
 	g_retro.initialized = true;
+	return true;
 }
 
 static void noop() { 
@@ -623,12 +623,12 @@ long long milliseconds_now() {
 	}
 }
 
-bool CLibretro::loadfile(char* filename)
+
+
+bool CLibretro::loadfile(char* filename, TCHAR* core_filename)
 {
 	if (isEmulating)isEmulating = false;
-	struct retro_system_info system = {0};
-
-	
+	struct retro_system_info system = {0};	
 	g_video = { 0 };
 	g_video.hw.version_major = 3;
 	g_video.hw.version_minor = 3;
@@ -636,14 +636,9 @@ bool CLibretro::loadfile(char* filename)
 	g_video.hw.context_reset = NULL;
 	g_video.hw.context_destroy = NULL;
 	variables_changed = false;
-	
-	
-	//core_load(_T("cores/parallel_n64_libretro.dll"));
-	//filename = "sm64.z64";
-	core_load(_T("cores/snes9x_libretro.dll"));
-	GetModuleFileName(g_retro.handle, corepath, MAX_PATH);
-	PathRemoveExtension(corepath);
-	filename = "skb.sfc";
+	if (!core_load(core_filename))return false;
+	GetModuleFileName(g_retro.handle, core_filename, MAX_PATH);
+	PathRemoveExtension(core_filename);
 	struct retro_game_info info = { filename, 0 };
 	FILE *Input = fopen(filename, "rb");
 	if (!Input) return(NULL);
@@ -684,6 +679,7 @@ bool CLibretro::loadfile(char* filename)
 DWORD WINAPI CLibretro::libretro_thread(void* Param)
 {
 	CLibretro* This = (CLibretro*)Param;
+	
 	retro_system_av_info av = { 0 };
 	g_retro.retro_get_system_av_info(&av);
 
@@ -704,14 +700,13 @@ DWORD WINAPI CLibretro::libretro_thread(void* Param)
 	This->_samples = (int16_t*)malloc(SAMPLE_COUNT);
 	memset(This->_samples, 0, SAMPLE_COUNT);
 	This->_audio = new Audio(av.timing.sample_rate * orig_ratio);
-	This->isEmulating = true;
+	
 	This->listDeltaMA.clear();
 	This->frame_count = 0;
 	This->fps = 0;
 	This->paused = false;
-
+	This->isEmulating = true;
 	This->run();
-
 	g_retro.retro_unload_game();
 	g_retro.retro_deinit();
 	delete []This->_audio;

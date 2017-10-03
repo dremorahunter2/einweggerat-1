@@ -12,7 +12,9 @@
 #include <sstream>
 #include <iomanip>
 #include "../ini.h"
-
+#include "../libretro.h"
+#include <shlwapi.h>
+#pragma comment(lib, "shlwapi.lib")
 using namespace std;
 using namespace utf8util;
 
@@ -644,6 +646,7 @@ public:
 		CLibretro *emulator;
 		input*    input_device;
 		HACCEL    m_haccelerator;
+
 		LRESULT OnLoadState(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 		{
 			CHAR szFileName[MAX_PATH];
@@ -730,6 +733,20 @@ public:
 		LRESULT OnCreate(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& bHandled)
 		{
 			CMessageLoop* pLoop = _Module.GetMessageLoop();
+
+
+			LPWSTR *szArgList;
+			int argCount;
+
+			szArgList = CommandLineToArgvW(GetCommandLine(), &argCount);
+			if (argCount < 3)
+			{
+				TCHAR text[] = L"No commandline parameters given\n"
+				L"The parameters are = [game/content_filename] [core_filename]\n";
+				MessageBox(text, L"Error", MB_OK);
+				ExitProcess(0);
+				return NULL;
+			}
 			
 			ATLASSERT(pLoop != NULL);
 			bHandled = FALSE;
@@ -747,20 +764,25 @@ public:
 			UINT gwTimerRes = min(max(tc.wPeriodMin, 1), tc.wPeriodMax); 
 			timeBeginPeriod(gwTimerRes);
 
-			CHAR szFileName[MAX_PATH];
-			string ansi = ansi_from_utf16(L"smw.sfc");
+			CHAR szFileName[MAX_PATH] = { 0 };
+			string ansi = ansi_from_utf16(szArgList[1]);
 			strcpy(szFileName, ansi.c_str());
-			emulator->loadfile(szFileName);
+			wchar_t core_filename[512] = {0};
+			GetCurrentDirectory(MAX_PATH, core_filename);
+			PathAppend(core_filename, L"cores\\");
+			PathAppend(core_filename, szArgList[2]);
+			emulator->loadfile(szFileName, core_filename);
 
 			return 0;
 		}
 
 		void ProcessFile(LPCTSTR lpszPath)
 		{
+			/**
 			CHAR szFileName[MAX_PATH];
 			string ansi = ansi_from_utf16(lpszPath);
 			strcpy(szFileName,ansi.c_str());
-			emulator->loadfile(szFileName);
+			emulator->loadfile(szFileName);*/
 		}
 
 		LRESULT OnDestroy(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& bHandled)
@@ -808,9 +830,9 @@ public:
 			CFileDialog dlg( TRUE, NULL, NULL, OFN_HIDEREADONLY | OFN_OVERWRITEPROMPT, sFiles);
 			if (dlg.DoModal() == IDOK)
 			{
-				string ansi = ansi_from_utf16(dlg.m_szFileName);
-				strcpy(szFileName,ansi.c_str());
-				emulator->loadfile(szFileName);
+			//	string ansi = ansi_from_utf16(dlg.m_szFileName);
+			//	strcpy(szFileName,ansi.c_str());
+			///	emulator->loadfile(szFileName);
 				// do stuff
 			}
 			return 0;

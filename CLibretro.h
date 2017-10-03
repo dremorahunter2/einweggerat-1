@@ -95,7 +95,7 @@ public:
 	unsigned frame_count;
 	double getDeltaMovingAverage(double delta);
 	bool running();
-	bool loadfile(char* filename);
+	bool loadfile(char* filename, TCHAR* core_filename);
 	void splash();
 	void render();
 	void run();
