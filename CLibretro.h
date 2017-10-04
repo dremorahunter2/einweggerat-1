@@ -75,6 +75,8 @@ public:
 		std::string usevars;
 	};
 	TCHAR corepath[MAX_PATH];
+	TCHAR inputcfg_path[MAX_PATH];
+	TCHAR corevar_path[MAX_PATH];
 	std::vector<core_vars> variables;
 	bool variables_changed;
 	HANDLE thread_handle;
@@ -95,7 +97,7 @@ public:
 	unsigned frame_count;
 	double getDeltaMovingAverage(double delta);
 	bool running();
-	bool loadfile(char* filename, TCHAR* core_filename);
+	bool loadfile(TCHAR* filename, TCHAR* core_filename, bool gamespecificoptions);
 	void splash();
 	void render();
 	void run();

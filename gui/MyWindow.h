@@ -733,11 +733,7 @@ public:
 
 		LRESULT OnCreate(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& bHandled)
 		{
-			CMessageLoop* pLoop = _Module.GetMessageLoop();
-
-
-		
-			
+			CMessageLoop* pLoop = _Module.GetMessageLoop();	
 			ATLASSERT(pLoop != NULL);
 			bHandled = FALSE;
 			input_device = input::CreateInstance(GetModuleHandle(NULL), m_hWnd);
@@ -758,8 +754,7 @@ public:
 			int argCount;
 			TCHAR rom_filename[MAX_PATH] = { 0 };
 			TCHAR core_filename[MAX_PATH] = { 0 };
-			GetCurrentDirectory(MAX_PATH, core_filename);
-			PathAppend(core_filename, L"cores\\");
+			bool specifics = false;
 			szArgList = CommandLineToArgvW(GetCommandLine(), &argCount);
 
 			while( (argCount> 1) && (szArgList[1][0] == '-'))
@@ -769,35 +764,33 @@ public:
 				case 'r':
 					lstrcpy(rom_filename, &szArgList[1][2]);
 					break;
-
 				case 'c':
+					GetCurrentDirectory(MAX_PATH, core_filename);
+					PathAppend(core_filename, L"cores\\");
 					PathAppend(core_filename, &szArgList[1][2]);
 					break;
 
 				case 'q':
+					specifics = true;
 					++szArgList;
 					--argCount;
 						break;
 				default:
-					TCHAR text[] = L"No commandline parameters given\n"
+					bad:
+					TCHAR text[] = L"No or wrong commandline parameters given\n"
 						L"The parameters are = \n"
 						L"-r [game/content_filename]\n"
 						L"-c [core_filename]\n";
 						L"-q Load per-game core/input configuration (optional)\n";
 					MessageBox(text, L"Error", MB_OK);
 					DestroyWindow();
+					return 0;
 				}
 				++szArgList;
 				--argCount;
 			}
-			LocalFree(szArgList);
-
-			CHAR szFileName[MAX_PATH] = { 0 };
-			string ansi = ansi_from_utf16(rom_filename);
-			strcpy(szFileName, ansi.c_str());
-			
-			emulator->loadfile(szFileName, core_filename);
-
+			if (lstrcmp(core_filename,L"") == 0 || lstrcmp(rom_filename, L"") == 0)goto bad;
+			emulator->loadfile(rom_filename, core_filename,specifics);
 			return 0;
 		}
 

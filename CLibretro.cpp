@@ -148,22 +148,11 @@ uintptr_t core_get_current_framebuffer() {
 #include <Shlwapi.h>
 #pragma comment(lib, "shlwapi.lib")
 
-void GetThisPath(TCHAR* dest, size_t destSize)
-{
-	TCHAR Buffer[512];
-	DWORD dwRet;
-	dwRet = GetCurrentDirectory(512, dest);
-}
-
 void init_coresettings(retro_variable *var)
 {
-	TCHAR buffer[MAX_PATH] = { 0 };
-	GetModuleFileName(g_retro.handle, buffer, MAX_PATH);
-	PathRemoveExtension(buffer);
-	lstrcat(buffer, _T(".ini"));
+	CLibretro * retro = CLibretro::GetSingleton();
 	FILE *fp = NULL;
-	fp = _wfopen(buffer, L"r");
-	CLibretro *retro = CLibretro::GetSingleton();
+	fp = _wfopen(retro->corevar_path, L"r");
 	
 	if (!fp)
 	{
@@ -208,7 +197,7 @@ void init_coresettings(retro_variable *var)
 		char* data = (char*)malloc(size);
 		size = ini_save(ini, data, size); // Actually save the file
 		ini_destroy(ini);
-		fp = _wfopen(buffer, L"w");
+		fp = _wfopen(retro->corevar_path, L"w");
 		fwrite(data, 1, size, fp);
 		fclose(fp);
 		free(data);
@@ -265,7 +254,7 @@ const char* load_coresettings(retro_variable *var)
 
 bool core_environment(unsigned cmd, void *data) {
 	bool *bval;
-	char *sys_path = "system";
+	char *sys_path = "cores";
 
 	switch (cmd) {
 	case RETRO_ENVIRONMENT_GET_LOG_INTERFACE: {
@@ -289,15 +278,11 @@ bool core_environment(unsigned cmd, void *data) {
 	case RETRO_ENVIRONMENT_SET_INPUT_DESCRIPTORS: // 31
 	{
 		input *input_device = input::GetSingleton();
-
+		CLibretro * retro = CLibretro::GetSingleton();
 		char variable_val2[50] = { 0 };
-		TCHAR buffer[MAX_PATH] = { 0 };
-		GetModuleFileName(g_retro.handle, buffer, MAX_PATH);
-		PathRemoveExtension(buffer);
-		lstrcat(buffer, L"_input.cfg");
 		Std_File_Reader_u out;
-		lstrcpy(input_device->path, buffer);
-		if (!out.open(buffer))
+		lstrcpy(input_device->path, retro->inputcfg_path);
+		if (!out.open(retro->inputcfg_path))
 		{
 			input_device->load(out);
 			out.close();
@@ -339,7 +324,7 @@ bool core_environment(unsigned cmd, void *data) {
 				++var;
 			}
 			Std_File_Writer_u out2;
-			if (!out2.open(buffer))
+			if (!out2.open(retro->inputcfg_path))
 			{
 				input_device->save(out2);
 				out2.close();
@@ -625,7 +610,7 @@ long long milliseconds_now() {
 
 
 
-bool CLibretro::loadfile(char* filename, TCHAR* core_filename)
+bool CLibretro::loadfile(TCHAR* filename, TCHAR* core_filename,bool gamespecificoptions)
 {
 	if (isEmulating)isEmulating = false;
 	struct retro_system_info system = {0};	
@@ -636,11 +621,51 @@ bool CLibretro::loadfile(char* filename, TCHAR* core_filename)
 	g_video.hw.context_reset = NULL;
 	g_video.hw.context_destroy = NULL;
 	variables_changed = false;
+
+
+	if (gamespecificoptions)
+	{
+		TCHAR filez[MAX_PATH] = { 0 };
+		lstrcpy(filez, filename);
+		memset(inputcfg_path, 0, MAX_PATH);
+		memset(corevar_path, 0, MAX_PATH);
+		TCHAR core_filename[MAX_PATH] = { 0 };
+		GetCurrentDirectory(MAX_PATH, core_filename);
+		PathAppend(core_filename, L"cores\\");
+		PathStripPath(filez);
+		PathRemoveExtension(filez);
+		lstrcpy(inputcfg_path, core_filename);
+		lstrcpy(corevar_path, core_filename);
+		lstrcat(inputcfg_path,filez);
+		lstrcat(corevar_path, filez);
+		lstrcat(inputcfg_path, L"_input.cfg");
+		lstrcat(corevar_path, L".ini");
+
+	}
+	else
+	{
+		TCHAR core_filename2[MAX_PATH] = { 0 };
+		memset(inputcfg_path, 0, MAX_PATH);
+		memset(corevar_path, 0, MAX_PATH);
+		GetCurrentDirectory(MAX_PATH, core_filename2);
+		PathAppend(core_filename2, L"cores\\");
+		lstrcpy(core_filename2,core_filename);
+		PathRemoveExtension(core_filename2);
+		lstrcat(inputcfg_path, core_filename2);
+		lstrcat(corevar_path, core_filename2);
+		lstrcat(inputcfg_path, L"_input.cfg");
+		lstrcat(corevar_path, L".ini");
+	}
 	if (!core_load(core_filename))return false;
-	GetModuleFileName(g_retro.handle, core_filename, MAX_PATH);
-	PathRemoveExtension(core_filename);
-	struct retro_game_info info = { filename, 0 };
-	FILE *Input = fopen(filename, "rb");
+
+	
+	
+	CHAR szFileName[MAX_PATH] = { 0 };
+	string ansi = ansi_from_utf16(filename);
+	strcpy(szFileName, ansi.c_str());
+	
+	struct retro_game_info info = { szFileName, 0 };
+	FILE *Input = fopen(szFileName, "rb");
 	if (!Input) return(NULL);
 	// Get the filesize
 	fseek(Input, 0, SEEK_END);
@@ -652,7 +677,7 @@ bool CLibretro::loadfile(char* filename, TCHAR* core_filename)
 	if (Input) fclose(Input);
 	Input = NULL;
 
-	info.path = filename;
+	info.path = szFileName;
 	info.data = NULL;
 	info.size = Size;
 	info.meta = NULL;
@@ -668,11 +693,9 @@ bool CLibretro::loadfile(char* filename, TCHAR* core_filename)
 	if (info.data)
 	free((void*)info.data);
 
-
-	
 	thread_handle = CreateThread(NULL, 0, libretro_thread, (void*) this, 0, &thread_id);
 	
-	return isEmulating;
+	return true;
 }
 
 
