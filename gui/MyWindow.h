@@ -49,7 +49,7 @@ std::string ws2s(const std::wstring &wstr)
 	WideCharToMultiByte(CP_UTF8, 0, &wstr[0], (int)wstr.size(), &strTo[0], size_needed, NULL, NULL);
 	return strTo;
 }
-
+#pragma optimize( "", off )  
 class CVariablesView : public CDialogImpl<CVariablesView>
 {
 public:
@@ -222,10 +222,8 @@ public:
 	void save()
 	{
 		TCHAR buffer[MAX_PATH] = { 0 };
-		lstrcpy(buffer, retro->corepath);
-		lstrcat(buffer, _T(".ini"));
 		FILE *fp = NULL;
-		fp = _wfopen(buffer, L"r");
+		fp = _wfopen(retro->corevar_path, L"r");
 		fseek(fp, 0, SEEK_END);
 		int size = ftell(fp);
 		fseek(fp, 0, SEEK_SET);
@@ -243,7 +241,7 @@ public:
 		size = ini_save(ini, NULL, 0); // Find the size needed
 		char* data2 = (char*)malloc(size);
 		size = ini_save(ini, data2, size); // Actually save the file	
-		fp = _wfopen(buffer, L"w");
+		fp = _wfopen(retro->corevar_path, L"w");
 		fwrite(data2, 1, size, fp);
 		fclose(fp);
 		free(data2);
@@ -264,7 +262,7 @@ public:
 		return 0;
 	}
 };
-
+#pragma optimize( "", on )  
 class CInputView : public CDialogImpl<CInputView>
 {
 public:

@@ -147,7 +147,7 @@ uintptr_t core_get_current_framebuffer() {
 
 #include <Shlwapi.h>
 #pragma comment(lib, "shlwapi.lib")
-
+#pragma optimize( "", off )  
 void init_coresettings(retro_variable *var)
 {
 	CLibretro * retro = CLibretro::GetSingleton();
@@ -249,6 +249,7 @@ const char* load_coresettings(retro_variable *var)
 	}
 	return NULL;
 }
+#pragma optimize( "", on )  
 
 
 

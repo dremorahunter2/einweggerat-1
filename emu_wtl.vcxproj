@@ -48,7 +48,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <WholeProgramOptimization>false</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
     <PlatformToolset>v141</PlatformToolset>
   </PropertyGroup>
@@ -129,7 +129,7 @@
       <OutputFile>out_x64\einweggerat.exe</OutputFile>
       <AdditionalDependencies>winmm.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <GenerateMapFile>true</GenerateMapFile>
-      <MapFileName>libretro_loader.map</MapFileName>
+      <MapFileName>out_x64/einweggerat.map</MapFileName>
     </Link>
     <PreBuildEvent>
       <Command>SubWCRev.exe $(SolutionDir) $(ProjectDir)\svn_version.txt $(ProjectDir)\svn_version.h</Command>
@@ -170,22 +170,23 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
-      <Optimization>MaxSpeed</Optimization>
+      <Optimization>MinSpace</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PrecompiledHeaderFile>..\StdAfx.h</PrecompiledHeaderFile>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <FavorSizeOrSpeed>Size</FavorSizeOrSpeed>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
-      <GenerateDebugInformation>false</GenerateDebugInformation>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <OutputFile>out_x64\einweggerat.exe</OutputFile>
       <AdditionalDependencies>xinput.lib;dxguid.lib;dsound.lib;Xaudio2.lib;winmm.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <GenerateMapFile>true</GenerateMapFile>
-      <MapFileName>libretro_loader.map</MapFileName>
+      <MapFileName>out_x64/einweggerat.map</MapFileName>
     </Link>
     <PreBuildEvent>
       <Command>SubWCRev.exe $(SolutionDir) $(ProjectDir)\svn_version.txt $(ProjectDir)\svn_version.h</Command>
