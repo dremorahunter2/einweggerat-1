@@ -22,9 +22,9 @@ int Run(LPTSTR /*lpstrCmdLine*/ = NULL, int nCmdShow = SW_SHOWDEFAULT)
 	dlgMain.CenterWindow();
 	dlgMain.SetIcon(LoadIcon(_Module.GetResourceInstance(),MAKEINTRESOURCE(IDI_ICON1)));
 #ifdef _WIN64
-	dlgMain.SetWindowText(L"libretro loader - 64bit");
+	dlgMain.SetWindowText(L"einweggerät - 64bit");
 #else
-	dlgMain.SetWindowText(L"libretro loader - 32bit");
+	dlgMain.SetWindowText(L"einweggerät - 32bit");
 #endif
 	CMenu menu;
 	menu.Attach(LoadMenu( _Module.GetResourceInstance(), MAKEINTRESOURCE(MENU_MAINFRAME)));

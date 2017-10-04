@@ -623,6 +623,7 @@ private:
 	}
 };
 
+
 class CMyWindow : public CFrameWindowImpl<CMyWindow>, public CDropFileTarget<CMyWindow>,public CMessageFilter
 {
 public:
@@ -735,18 +736,7 @@ public:
 			CMessageLoop* pLoop = _Module.GetMessageLoop();
 
 
-			LPWSTR *szArgList;
-			int argCount;
-
-			szArgList = CommandLineToArgvW(GetCommandLine(), &argCount);
-			if (argCount < 3)
-			{
-				TCHAR text[] = L"No commandline parameters given\n"
-				L"The parameters are = [game/content_filename] [core_filename]\n";
-				MessageBox(text, L"Error", MB_OK);
-				ExitProcess(0);
-				return NULL;
-			}
+		
 			
 			ATLASSERT(pLoop != NULL);
 			bHandled = FALSE;
@@ -764,13 +754,48 @@ public:
 			UINT gwTimerRes = min(max(tc.wPeriodMin, 1), tc.wPeriodMax); 
 			timeBeginPeriod(gwTimerRes);
 
-			CHAR szFileName[MAX_PATH] = { 0 };
-			string ansi = ansi_from_utf16(szArgList[1]);
-			strcpy(szFileName, ansi.c_str());
-			wchar_t core_filename[512] = {0};
+			LPWSTR *szArgList;
+			int argCount;
+			TCHAR rom_filename[MAX_PATH] = { 0 };
+			TCHAR core_filename[MAX_PATH] = { 0 };
 			GetCurrentDirectory(MAX_PATH, core_filename);
 			PathAppend(core_filename, L"cores\\");
-			PathAppend(core_filename, szArgList[2]);
+			szArgList = CommandLineToArgvW(GetCommandLine(), &argCount);
+
+			while( (argCount> 1) && (szArgList[1][0] == '-'))
+			{
+				switch (szArgList[1][1])
+				{
+				case 'r':
+					lstrcpy(rom_filename, &szArgList[1][2]);
+					break;
+
+				case 'c':
+					PathAppend(core_filename, &szArgList[1][2]);
+					break;
+
+				case 'q':
+					++szArgList;
+					--argCount;
+						break;
+				default:
+					TCHAR text[] = L"No commandline parameters given\n"
+						L"The parameters are = \n"
+						L"-r [game/content_filename]\n"
+						L"-c [core_filename]\n";
+						L"-q Load per-game core/input configuration (optional)\n";
+					MessageBox(text, L"Error", MB_OK);
+					DestroyWindow();
+				}
+				++szArgList;
+				--argCount;
+			}
+			LocalFree(szArgList);
+
+			CHAR szFileName[MAX_PATH] = { 0 };
+			string ansi = ansi_from_utf16(rom_filename);
+			strcpy(szFileName, ansi.c_str());
+			
 			emulator->loadfile(szFileName, core_filename);
 
 			return 0;
