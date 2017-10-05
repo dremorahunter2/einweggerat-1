@@ -49,6 +49,7 @@
 #define IDC_VIDRES                      1190
 #define IDC_Z64POTFBO                   1190
 #define IDC_LIST_VARIABLES              1191
+#define IDC_CREDITS                     1192
 #define IDC_EXIT                        40001
 #define IDC_ABOUT                       40002
 #define ID_FILE_OPEN40003               40003
@@ -88,10 +89,6 @@
 #define ID_SAVESTATEFILE                40039
 #define ID_LOADSTATEFILE                40045
 #define ID_RESET                        40048
-#define ID_LOADSTATE1                   40051
-#define ID_LOADSTATE2                   40052
-#define ID_SAVESTATE1                   40053
-#define ID_SAVESTATE2                   40054
 
 // Next default values for new objects
 // 
@@ -99,7 +96,7 @@
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NEXT_RESOURCE_VALUE        139
 #define _APS_NEXT_COMMAND_VALUE         40056
-#define _APS_NEXT_CONTROL_VALUE         1192
+#define _APS_NEXT_CONTROL_VALUE         1193
 #define _APS_NEXT_SYMED_VALUE           101
 #endif
 #endif

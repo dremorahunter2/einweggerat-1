@@ -68,15 +68,14 @@ END
 
 IDD_ABOUT DIALOGEX 0, 0, 273, 201
 STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION
-CAPTION "About WinMupen..."
+CAPTION "About einweggerät"
 FONT 8, "MS Shell Dlg", 0, 0, 0x1
 BEGIN
     DEFPUSHBUTTON   "OK",IDOK,108,180,50,14,WS_GROUP
-    LTEXT           "MuGBX",IDC_APPVER,90,78,95,9
-    LTEXT           "Static",IDC_BUILDDATE,90,90,109,9
-    LTEXT           "Visit my site for info and support",IDC_LINK,72,168,120,9
-    GROUPBOX        "Credits",IDC_STATIC,6,102,264,60
-    LTEXT           "Uses the Windows Template Library by MS",IDC_WTLCRED,84,144,168,12
+    LTEXT           "MuGBX",IDC_APPVER,72,6,141,9
+    LTEXT           "Static",IDC_BUILDDATE,72,18,141,9
+    LTEXT           "Visit my site for info and support",IDC_LINK,84,168,120,9
+    EDITTEXT        IDC_CREDITS,12,30,252,126,ES_MULTILINE | ES_AUTOHSCROLL | ES_READONLY | WS_VSCROLL
 END
 
 
@@ -209,13 +208,9 @@ IDI_ICON1               ICON                    "emu_wtl.ico"
 
 IDR_ACCELERATOR1 ACCELERATORS
 BEGIN
-    VK_F1,          ID_LOADSTATE1,          VIRTKEY, NOINVERT
-    VK_F2,          ID_LOADSTATE2,          VIRTKEY, NOINVERT
-    VK_F1,          ID_LOADSTATEFILE,       VIRTKEY, CONTROL, ALT, NOINVERT
+    VK_F1,          ID_LOADSTATEFILE,       VIRTKEY, NOINVERT
     VK_F3,          ID_RESET,               VIRTKEY, NOINVERT
-    VK_F1,          ID_SAVESTATE1,          VIRTKEY, CONTROL, NOINVERT
-    VK_F2,          ID_SAVESTATE2,          VIRTKEY, CONTROL, NOINVERT
-    VK_F2,          ID_SAVESTATEFILE,       VIRTKEY, CONTROL, ALT, NOINVERT
+    VK_F2,          ID_SAVESTATEFILE,       VIRTKEY, NOINVERT
 END
 
 #endif    // English (Australia) resources

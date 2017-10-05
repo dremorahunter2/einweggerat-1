@@ -23,3 +23,5 @@ UpgradeLog.htm
 *.suo
 *.user
 *.db
+gitver.h
+version.mk

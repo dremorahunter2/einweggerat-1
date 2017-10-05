@@ -621,6 +621,72 @@ private:
 	}
 };
 
+#include "../gitver.h"
+class CAboutDlg : public CDialogImpl<CAboutDlg>
+{
+	CHyperLink website;
+	CStatic version_number;
+	CStatic builddate;
+	CEdit greets;
+public:
+	enum { IDD = IDD_ABOUT };
+	BEGIN_MSG_MAP(CAboutDlg)
+		MESSAGE_HANDLER(WM_INITDIALOG, OnInitDialogView1)
+		COMMAND_ID_HANDLER(IDOK,OnCancel)
+	END_MSG_MAP()
+
+	CAboutDlg() { }
+
+	LRESULT OnCancel(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
+	{
+		EndDialog(wID);
+		return 0;
+	}
+
+
+	LRESULT OnInitDialogView1(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
+	{
+		//CString verinf0 = SVN_REVISION;
+		CString date = "Built on " __DATE__ " at " __TIME__ " (GMT+10)";
+		CString verinfo = "einweggerät public build " GIT_VERSION;
+
+		CString greetz;
+
+		CenterWindow();
+
+		greets = GetDlgItem(IDC_CREDITS);
+		builddate = GetDlgItem(IDC_BUILDDATE);
+		builddate.SetWindowText(date);
+		version_number = GetDlgItem(IDC_APPVER);
+		version_number.SetWindowText(verinfo);
+
+		greetz += "einweggerät\r\n";
+		greetz += "-----------\r\n";
+		greetz += "Keys: \r\n";
+		greetz += "F1 : Load Savestate\r\n";
+		greetz += "F2 : Save Savestate\r\n";
+		greetz += "F3 : Reset\r\n";
+		greetz += "-----------\r\n";
+		greetz += "Commandline variables:\r\n";
+		greetz += "-r[game filename in quotes]\r\n";
+		greetz += "-c[core filename in quotes]\r\n";
+		greetz += "-q : Per-game configuration\r\n";
+		greetz += "-----------\r\n";
+		greetz += "Greetz:\r\n";
+		greetz += "Higor Eurípedes\r\n";
+		greetz += "Andre Leiradella\r\n";
+		greetz += "Daniel De Matteis\r\n";
+		greetz += "Andrés Suarez\r\n";
+		greetz += "Brad Parker\r\n";
+		greetz += "Chris Snowhill\r\n";
+		greetz += "Hunter Kaller\r\n";
+		greets.SetWindowText(greetz);
+		website.SubclassWindow(GetDlgItem(IDC_LINK));
+		website.SetHyperLink(_T("http://mudlord.info"));
+		return TRUE;
+	}
+};
+
 
 class CMyWindow : public CFrameWindowImpl<CMyWindow>, public CDropFileTarget<CMyWindow>,public CMessageFilter
 {
@@ -634,7 +700,7 @@ public:
 		COMMAND_ID_HANDLER(ID_PREFERENCES_COREVARIABLES, OnVariables)
 		COMMAND_ID_HANDLER_EX(IDC_EXIT, OnFileExit)
 		COMMAND_ID_HANDLER(ID_FILE_OPEN, OnFileOpen)
-		COMMAND_ID_HANDLER_EX(IDC_ABOUT, OnAbout)
+		COMMAND_ID_HANDLER(ID_ABOUT, OnAbout)
 		COMMAND_ID_HANDLER(ID_LOADSTATEFILE,OnLoadState)
 		COMMAND_ID_HANDLER(ID_SAVESTATEFILE, OnSaveState)
 		COMMAND_ID_HANDLER(ID_RESET, OnReset)
@@ -775,12 +841,8 @@ public:
 						break;
 				default:
 					bad:
-					TCHAR text[] = L"No or wrong commandline parameters given\n"
-						L"The parameters are = \n"
-						L"-r [game/content_filename]\n"
-						L"-c [core_filename]\n";
-						L"-q Load per-game core/input configuration (optional)\n";
-					MessageBox(text, L"Error", MB_OK);
+					CAboutDlg dlg;
+					dlg.DoModal();
 					DestroyWindow();
 					return 0;
 				}
@@ -854,10 +916,12 @@ public:
 			return 0;
 		}
 
-		void OnAbout(UINT uCode, int nID, HWND hwndCtrl)
+		LRESULT OnAbout(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 		{
-		
-			return;
+			CAboutDlg dlg;
+			dlg.DoModal();
+
+			return 0;
 		}
 };
 

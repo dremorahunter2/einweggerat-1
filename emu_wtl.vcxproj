@@ -88,7 +88,7 @@
     <LinkIncremental>false</LinkIncremental>
     <IncludePath>C:\codecrack\wtl\Include;C:\codecrack\code\github\libretro_loader\libretro-common-master\include;$(IncludePath)</IncludePath>
     <LibraryPath>$(LibraryPath)</LibraryPath>
-    <PreBuildEventUseInBuild>false</PreBuildEventUseInBuild>
+    <PreBuildEventUseInBuild>true</PreBuildEventUseInBuild>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -189,7 +189,7 @@
       <MapFileName>out_x64/einweggerat.map</MapFileName>
     </Link>
     <PreBuildEvent>
-      <Command>SubWCRev.exe $(SolutionDir) $(ProjectDir)\svn_version.txt $(ProjectDir)\svn_version.h</Command>
+      <Command>version.bat gitver.h GIT_VERSION</Command>
     </PreBuildEvent>
     <PreBuildEvent>
       <Message>
