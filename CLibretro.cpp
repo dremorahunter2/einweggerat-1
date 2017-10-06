@@ -2,7 +2,6 @@
 #include <windows.h>
 #define OUTSIDE_SPEEX
 #define MAL_IMPLEMENTATION
-#define MAL_NO_WASAPI
 #include "CLibretro.h"
 #include "libretro.h"
 #include "io/gl_render.h"
@@ -278,7 +277,14 @@ const char* load_coresettings(retro_variable *var)
 
 bool core_environment(unsigned cmd, void *data) {
 	bool *bval;
-	char *sys_path = "cores";
+	CLibretro * retro = CLibretro::GetSingleton();
+	input *input_device = input::GetSingleton();
+	TCHAR sys_filename[MAX_PATH] = { 0 };
+	GetCurrentDirectory(MAX_PATH, sys_filename);
+	PathAppend(sys_filename, L"system");
+	string ansi = ansi_from_utf16(sys_filename);
+	char *sys_path = (char*)ansi.c_str();
+	
 
 	switch (cmd) {
 	case RETRO_ENVIRONMENT_GET_LOG_INTERFACE: {
@@ -294,15 +300,15 @@ bool core_environment(unsigned cmd, void *data) {
 	case RETRO_ENVIRONMENT_GET_SAVE_DIRECTORY: // 31
 	{
 		char **ppDir = (char**)data;
-		*ppDir = (char*)sys_path;
+		*ppDir = strdup(sys_path);
 		return true;
 	}
 	break;
 
 	case RETRO_ENVIRONMENT_SET_INPUT_DESCRIPTORS: // 31
 	{
-		input *input_device = input::GetSingleton();
-		CLibretro * retro = CLibretro::GetSingleton();
+		
+		
 		char variable_val2[50] = { 0 };
 		Std_File_Reader_u out;
 		lstrcpy(input_device->path, retro->inputcfg_path);
@@ -376,7 +382,6 @@ bool core_environment(unsigned cmd, void *data) {
 	break;
 	case RETRO_ENVIRONMENT_GET_VARIABLE_UPDATE:
 	{
-	CLibretro *retro = CLibretro::GetSingleton();
 	*(bool*)data = retro->variables_changed;
 	retro->variables_changed = false;
 	return true;
@@ -632,7 +637,7 @@ long long milliseconds_now() {
 	}
 }
 
-
+#include <sys/stat.h>
 
 bool CLibretro::loadfile(TCHAR* filename, TCHAR* core_filename,bool gamespecificoptions)
 {
@@ -687,36 +692,34 @@ bool CLibretro::loadfile(TCHAR* filename, TCHAR* core_filename,bool gamespecific
 	CHAR szFileName[MAX_PATH] = { 0 };
 	string ansi = ansi_from_utf16(filename);
 	strcpy(szFileName, ansi.c_str());
-	
-	struct retro_game_info info = { szFileName, 0 };
-	FILE *Input = fopen(szFileName, "rb");
-	if (!Input) return(NULL);
-	// Get the filesize
-	fseek(Input, 0, SEEK_END);
-	int Size = ftell(Input);
-	fseek(Input, 0, SEEK_SET);
-	BYTE *Memory = (BYTE *)malloc(Size);
-	if (!Memory) return(NULL);
-	if (fread(Memory, 1, Size, Input) != (size_t)Size) return(NULL);
-	if (Input) fclose(Input);
-	Input = NULL;
-
+	struct retro_game_info info = {0};
+	struct stat st;
+	stat(szFileName, &st);
 	info.path = szFileName;
 	info.data = NULL;
-	info.size = Size;
+	info.size = st.st_size;
 	info.meta = NULL;
 
 	g_retro.retro_get_system_info(&system);
 	if (!system.need_fullpath) {
+		FILE *Input = _wfopen(filename, L"rb");
+		if (!Input) return(NULL);
+		// Get the filesize
+		fseek(Input, 0, SEEK_END);
+		int Size = ftell(Input);
+		fseek(Input, 0, SEEK_SET);
+		BYTE *Memory = (BYTE *)malloc(Size);
+		if (!Memory) return(NULL);
+		if (fread(Memory, 1, Size, Input) != (size_t)Size) return(NULL);
+		if (Input) fclose(Input);
+		Input = NULL;
 		info.data = malloc(info.size);
 		memcpy((BYTE*)info.data, Memory, info.size);
 		free(Memory);
 	}
-
 	if (!g_retro.retro_load_game(&info)) return false;
 	if (info.data)
 	free((void*)info.data);
-
 	thread_handle = CreateThread(NULL, 0, libretro_thread, (void*) this, 0, &thread_id);
 	
 	return true;
@@ -746,7 +749,7 @@ DWORD WINAPI CLibretro::libretro_thread(void* Param)
 	}
 	This->_samples = (int16_t*)malloc(SAMPLE_COUNT);
 	memset(This->_samples, 0, SAMPLE_COUNT);
-	This->_audio = new Audio(av.timing.sample_rate * orig_ratio);
+	This->_audio = new Audio(av.timing.sample_rate);
 	
 	This->listDeltaMA.clear();
 	This->frame_count = 0;

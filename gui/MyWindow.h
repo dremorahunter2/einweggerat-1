@@ -669,8 +669,10 @@ public:
 		greetz += "-----------\r\n";
 		greetz += "Commandline variables:\r\n";
 		greetz += "-r[game filename in quotes]\r\n";
-		greetz += "-c[core filename in quotes]\r\n";
+		greetz += "-c[core filename in quotes, in \"cores\"directory]\r\n";
 		greetz += "-q : Per-game configuration\r\n";
+		greetz += "\n";
+		greetz += "Example: einweggerat.exe -r\"somerom.sfc\" -c\"snes9x_libretro.dll\"\r\n";
 		greetz += "-----------\r\n";
 		greetz += "Greetz:\r\n";
 		greetz += "Higor Eurípedes\r\n";

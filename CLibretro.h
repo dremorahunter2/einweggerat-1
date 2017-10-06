@@ -8,6 +8,7 @@
 #include <condition_variable>
 #define OUTSIDE_SPEEX
 #include "io/audio/speex_resampler.h"
+#define MAL_NO_NULL
 #define MAL_NO_WASAPI
 #include "io/input.h"
 #include "io/audio/mini_al.h"
