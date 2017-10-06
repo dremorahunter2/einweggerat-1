@@ -264,9 +264,7 @@ const char* load_coresettings(retro_variable *var)
 	{
 		if (strcmp(retro->variables[i].name.c_str(), var->key) == 0)
 		{
-			char variable_val2[50] = { 0 };
-			strcpy(variable_val2, (const char*)retro->variables[i].var.c_str());
-			return variable_val2;
+			return strdup(retro->variables[i].var.c_str());
 		}
 	}
 	return NULL;
@@ -287,6 +285,10 @@ bool core_environment(unsigned cmd, void *data) {
 	
 
 	switch (cmd) {
+	case RETRO_ENVIRONMENT_SET_MESSAGE: {
+		struct retro_message *cb = (struct retro_message *)data;
+		return true;
+	}
 	case RETRO_ENVIRONMENT_GET_LOG_INTERFACE: {
 		struct retro_log_callback *cb = (struct retro_log_callback *)data;
 		cb->log = core_log;

@@ -831,11 +831,20 @@ public:
 					lstrcpy(rom_filename, &szArgList[1][2]);
 					break;
 				case 'c':
-					GetCurrentDirectory(MAX_PATH, core_filename);
-					PathAppend(core_filename, L"cores\\");
-					PathAppend(core_filename, &szArgList[1][2]);
+					TCHAR * pch;
+					pch = _tcsstr(&szArgList[1][2], L"cores\\");
+					if (pch)
+					{
+						GetCurrentDirectory(MAX_PATH, core_filename);
+						PathAppend(core_filename, L"cores\\");
+						PathAppend(core_filename, &szArgList[1][2]);
+					}
+					else
+					{
+						PathAppend(core_filename, &szArgList[1][2]);
+					}
+				    
 					break;
-
 				case 'q':
 					specifics = true;
 					++szArgList;

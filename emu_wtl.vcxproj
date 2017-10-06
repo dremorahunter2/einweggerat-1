@@ -76,7 +76,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
     <IncludePath>C:\codecrack\wtl\Include;C:\codecrack\code\github\libretro_loader\libretro-common-master\include;$(IncludePath)</IncludePath>
-    <PreBuildEventUseInBuild>false</PreBuildEventUseInBuild>
+    <PreBuildEventUseInBuild>true</PreBuildEventUseInBuild>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
@@ -132,7 +132,7 @@
       <MapFileName>out_x64/einweggerat.map</MapFileName>
     </Link>
     <PreBuildEvent>
-      <Command>SubWCRev.exe $(SolutionDir) $(ProjectDir)\svn_version.txt $(ProjectDir)\svn_version.h</Command>
+      <Command>version.bat gitver.h GIT_VERSION</Command>
     </PreBuildEvent>
     <PreBuildEvent>
       <Message>Making revision info...</Message>
