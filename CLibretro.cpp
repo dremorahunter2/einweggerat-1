@@ -264,7 +264,7 @@ const char* load_coresettings(retro_variable *var)
 	{
 		if (strcmp(retro->variables[i].name.c_str(), var->key) == 0)
 		{
-			return strdup(retro->variables[i].var.c_str());
+			return retro->variables[i].var.c_str();
 		}
 	}
 	return NULL;
@@ -277,13 +277,6 @@ bool core_environment(unsigned cmd, void *data) {
 	bool *bval;
 	CLibretro * retro = CLibretro::GetSingleton();
 	input *input_device = input::GetSingleton();
-	TCHAR sys_filename[MAX_PATH] = { 0 };
-	GetCurrentDirectory(MAX_PATH, sys_filename);
-	PathAppend(sys_filename, L"system");
-	string ansi = ansi_from_utf16(sys_filename);
-	char *sys_path = (char*)ansi.c_str();
-	
-
 	switch (cmd) {
 	case RETRO_ENVIRONMENT_SET_MESSAGE: {
 		struct retro_message *cb = (struct retro_message *)data;
@@ -301,8 +294,17 @@ bool core_environment(unsigned cmd, void *data) {
 	case RETRO_ENVIRONMENT_GET_SYSTEM_DIRECTORY: // 9
 	case RETRO_ENVIRONMENT_GET_SAVE_DIRECTORY: // 31
 	{
+		static char *sys_path = NULL;
+		if (!sys_path)
+		{
+			TCHAR sys_filename[MAX_PATH] = { 0 };
+			GetCurrentDirectory(MAX_PATH, sys_filename);
+			PathAppend(sys_filename, L"system");
+			string ansi = ansi_from_utf16(sys_filename);
+			sys_path = strdup(ansi.c_str());
+		}
 		char **ppDir = (char**)data;
-		*ppDir = strdup(sys_path);
+		*ppDir = sys_path;
 		return true;
 	}
 	break;
