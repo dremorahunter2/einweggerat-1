@@ -149,11 +149,12 @@ void refresh_vertex_data() {
 
 	vertex_data vert[] = {
 		// pos, coord
-		-1.0f, -1.0f,0., 0.0f, bottom, // left-bottom
-		-1.0f, 1.0f,0., 0.0f, 0.0f,   // left-top
-		1.0f, -1.0f,0., right, bottom,// right-bottom
-		1.0f, 1.0f,0., right, 0.0f,  // right-top
+		-1.0f,-1.0f,0., 0.0f,  bottom, // left-bottom
+		-1.0f, 1.0f,0., 0.0f,  0.0f,   // left-top
+		1.0f, -1.0f,0., right,  bottom,// right-bottom
+		1.0f,  1.0f,0., right,  0.0f,  // right-top
 	};
+
 
 	glBindVertexArray(g_shader.vao);
 
@@ -212,23 +213,23 @@ void init_framebuffer(int width, int height)
 void resize_cb(int w, int h) {
 	int32_t vp_width = w;
 	int32_t vp_height = h;
-
+	//glViewport(0, 0, vp_width, vp_height);
 	// default to bottom left corner of the window above the status bar
 	int32_t vp_x = 0;
 	int32_t vp_y = 0;
 
-	int32_t hw = g_video.clip_h * vp_width;
-	int32_t wh = g_video.clip_w * vp_height;
+	int32_t hw = g_video.tex_h * vp_width;
+	int32_t wh = g_video.tex_w * vp_height;
 
 	// add letterboxes or pillarboxes if the window has a different aspect ratio
 	// than the current display mode
 	if (hw > wh) {
-		int32_t w_max = wh / g_video.clip_h;
+		int32_t w_max = wh / g_video.tex_h;
 		vp_x += (vp_width - w_max) / 2;
 		vp_width = w_max;
 	}
 	else if (hw < wh) {
-		int32_t h_max = hw / g_video.clip_w;
+		int32_t h_max = hw / g_video.tex_w;
 		vp_y += (vp_height - h_max) / 2;
 		vp_height = h_max;
 	}
@@ -352,8 +353,8 @@ void video_configure(const struct retro_game_geometry *geom, HWND hwnd) {
 
 	resize_to_aspect(geom->aspect_ratio, geom->base_width * 1, geom->base_height * 1, &nwidth, &nheight);
 
-	nwidth *= g_scale;
-	nheight *= g_scale;
+	nwidth *= 1;
+	nheight *= 1;
 
 	if (!g_win)
 		create_window(nwidth, nheight, hwnd);

@@ -221,31 +221,21 @@ public:
 
 	void save()
 	{
-		TCHAR buffer[MAX_PATH] = { 0 };
 		FILE *fp = NULL;
-		fp = _wfopen(retro->corevar_path, L"r");
-		fseek(fp, 0, SEEK_END);
-		int size = ftell(fp);
-		fseek(fp, 0, SEEK_SET);
-		char* data = (char*)malloc(size + 1);
-		fread(data, 1, size, fp);
-		data[size] = '\0';
-		fclose(fp);
-		ini_t* ini = ini_load(data, NULL);
-		free(data);
-		for (int i = 0; i < retro->variables.size(); i++)
-		{
-			int second_index = ini_find_property(ini, INI_GLOBAL_SECTION, (char*)retro->variables[i].name.c_str(), retro->variables[i].name.length());
-			ini_property_value_set(ini, INI_GLOBAL_SECTION, second_index, (char*)retro->variables[i].var.c_str(), retro->variables[i].name.length());
+		ini_t* ini = ini_create(NULL);
+		for (int i = 0; i < retro->variables.size(); i++){
+			ini_property_add(ini, INI_GLOBAL_SECTION, retro->variables[i].name.c_str(),retro->variables[i].name.length(), retro->variables[i].var.c_str(), 
+			retro->variables[i].var.length());
 		}
-		size = ini_save(ini, NULL, 0); // Find the size needed
-		char* data2 = (char*)malloc(size);
-		size = ini_save(ini, data2, size); // Actually save the file	
-		fp = _wfopen(retro->corevar_path, L"w");
-		fwrite(data2, 1, size, fp);
-		fclose(fp);
-		free(data2);
+		int size = ini_save(ini, NULL, 0); // Find the size needed
+		char* data = (char*)malloc(size);
+		size = ini_save(ini, data, size); // Actually save the file	
 		ini_destroy(ini);
+		fp = _wfopen(retro->corevar_path, L"w");
+		fwrite(data, 1, size, fp);
+		fclose(fp);
+		free(data);
+		
 	}
 
 	LRESULT OnOK(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
