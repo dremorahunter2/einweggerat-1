@@ -41,7 +41,7 @@ extern "C" {
 	bool init(unsigned sample_rate);
 	void destroy();
 	void reset();
-	void mix(const int16_t* samples, size_t frames,int64_t fps);
+	void mix(const int16_t* samples, size_t sample_count);
 	mal_uint32 fill_buffer(uint8_t* pSamples, mal_uint32 samplecount);
 	mal_context context;
 	mal_device device;
@@ -88,9 +88,7 @@ public:
 	DWORD rate;
 	bool paused;
 	std::list<double> listDeltaMA;
-	bool sync_video_tick(void);
 	unsigned frame_count;
-	double getDeltaMovingAverage(double delta);
 	bool running();
 	bool loadfile(TCHAR* filename, TCHAR* core_filename, bool gamespecificoptions);
 	void splash();

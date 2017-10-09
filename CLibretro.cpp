@@ -70,10 +70,10 @@ mal_uint32 Audio::fill_buffer(uint8_t* out, mal_uint32 count) {
 
 	}
 
-	void Audio::mix(const int16_t* samples, size_t frames, int64_t fps)
+	void Audio::mix(const int16_t* samples, size_t sample_count)
 	{
-		if (!frames)return;
-		uint32_t in_len = frames * 2 * sizeof(int16_t);
+		if (!sample_count)return;
+		uint32_t in_len = sample_count * sizeof(int16_t);
 		std::unique_lock<std::mutex> l(lock);
 		buffer_full.wait(l, [this, in_len]() {return in_len < fifo_write_avail(_fifo); });
 		fifo_write(_fifo, samples, in_len);
@@ -747,7 +747,6 @@ DWORD WINAPI CLibretro::libretro_thread(void* Param)
 	
 	This->listDeltaMA.clear();
 	This->frame_count = 0;
-	This->fps = 0;
 	This->paused = false;
 	This->isEmulating = true;
 	This->run();
@@ -773,35 +772,6 @@ void CLibretro::splash()
 }
 
 
-double CLibretro::getDeltaMovingAverage(double delta)
-{
-	if (listDeltaMA.size() == 2048)listDeltaMA.clear();
-	listDeltaMA.push_back(delta);
-	double sum = 0;
-	for (std::list<double>::iterator p = listDeltaMA.begin(); p != listDeltaMA.end(); ++p)
-	sum += (double)*p;
-	return sum / listDeltaMA.size();
-}
-
-
-
-bool CLibretro::sync_video_tick(void)
-{
-	static uint64_t fps_time = 0;
-	bool fps_updated = false;
-	uint64_t now = milliseconds_now();
-
-//	if (frame_count++ % 120 == 0)
-	{
-		fps = (1000.0) / (now - fps_time);
-		fps_time = now;
-		fps_updated = true;
-	}
-
-	return fps_updated;
-}
-
-
 void CLibretro::run()
 {
 	while(isEmulating)
@@ -817,13 +787,7 @@ void CLibretro::run()
 				g_retro.retro_run();
 			}
 		}
-		
-		
-	
-	
-		sync_video_tick();
-		retro_time_t avg = getDeltaMovingAverage(fps);
-		_audio->mix(_samples, _samplesCount / 2,avg);
+		_audio->mix(_samples, _samplesCount);
 		
 	}
 	
