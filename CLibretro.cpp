@@ -28,15 +28,11 @@ static mal_uint32 sdl_audio_callback(mal_device* pDevice, mal_uint32 frameCount,
 mal_uint32 Audio::fill_buffer(uint8_t* out, mal_uint32 count) {
 	std::lock_guard<std::mutex> lg(mutex);	
 	size_t avail = fifo_read_avail(_fifo);
-	if (avail)
-	{
-		avail = count > avail ? avail : count;
-		fifo_read(_fifo, out, avail);
-		memset(out + avail, 0, count - avail);	
-		buffer_full.notify_all();
-		return avail;
-	}
-	return 0;
+	size_t write_size =count > avail ? avail : count;
+	fifo_read(_fifo, out,write_size);
+	buffer_full.notify_all();
+	memset(out + write_size, 0, count - write_size);
+	return count;
 }
 
 
@@ -549,6 +545,7 @@ bool core_load(TCHAR *sofile) {
 	void(*set_audio_sample_batch)(retro_audio_sample_batch_t) = NULL;
 	memset(&g_retro, 0, sizeof(g_retro));
 	g_retro.handle = LoadLibrary(sofile);
+	if (!g_retro.handle)return false;
 
 #define die() do { FreeLibrary(g_retro.handle); return false; } while(0)
 #define libload(name) GetProcAddress(g_retro.handle, name)
@@ -680,9 +677,8 @@ bool CLibretro::loadfile(TCHAR* filename, TCHAR* core_filename,bool gamespecific
 		TCHAR core_filename2[MAX_PATH] = { 0 };
 		memset(inputcfg_path, 0, MAX_PATH);
 		memset(corevar_path, 0, MAX_PATH);
-		GetCurrentDirectory(MAX_PATH, core_filename2);
 		PathAppend(core_filename2, L"cores\\");
-		lstrcpy(core_filename2,core_filename);
+		lstrcat(core_filename2,core_filename);
 		PathRemoveExtension(core_filename2);
 		lstrcat(inputcfg_path, core_filename2);
 		lstrcat(corevar_path, core_filename2);
@@ -753,7 +749,7 @@ DWORD WINAPI CLibretro::libretro_thread(void* Param)
 	}
 	This->_samples = (int16_t*)malloc(SAMPLE_COUNT);
 	memset(This->_samples, 0, SAMPLE_COUNT);
-	This->_audio = new Audio(av.timing.sample_rate);
+	This->_audio = new Audio(av.timing.sample_rate*orig_ratio);
 	
 	This->listDeltaMA.clear();
 	This->frame_count = 0;

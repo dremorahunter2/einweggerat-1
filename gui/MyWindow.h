@@ -822,7 +822,10 @@ public:
 			TCHAR core_filename[MAX_PATH] = { 0 };
 			bool specifics = false;
 			szArgList = CommandLineToArgvW(GetCommandLine(), &argCount);
-
+			TCHAR core_filename2[MAX_PATH] = { 0 };
+			GetCurrentDirectory(MAX_PATH, core_filename2);
+			PathAppend(core_filename2, L"cores");
+			bool set=SetDllDirectory(core_filename2);
 			while( (argCount> 1) && (szArgList[1][0] == '-'))
 			{
 				switch (szArgList[1][1])
@@ -831,19 +834,7 @@ public:
 					lstrcpy(rom_filename, &szArgList[1][2]);
 					break;
 				case 'c':
-					TCHAR * pch;
-					pch = _tcsstr(&szArgList[1][2], L"cores\\");
-					if (pch)
-					{
-						GetCurrentDirectory(MAX_PATH, core_filename);
-						PathAppend(core_filename, L"cores\\");
-						PathAppend(core_filename, &szArgList[1][2]);
-					}
-					else
-					{
-						PathAppend(core_filename, &szArgList[1][2]);
-					}
-				    
+					lstrcpy(core_filename, &szArgList[1][2]);
 					break;
 				case 'q':
 					specifics = true;

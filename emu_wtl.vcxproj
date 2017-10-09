@@ -159,7 +159,7 @@
       <AdditionalDependencies>winmm.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PreBuildEvent>
-      <Command>SubWCRev.exe $(SolutionDir) $(ProjectDir)\svn_version.txt $(ProjectDir)\svn_version.h</Command>
+      <Command>version.bat gitver.h GIT_VERSION</Command>
     </PreBuildEvent>
     <PreBuildEvent>
       <Message>
