@@ -56,9 +56,7 @@ extern "C" {
 	const int16_t* _samples;
 	size_t         _frames;
 	std::mutex lock;
-	bool buf_ready;
 	std::condition_variable buffer_full;
-	std::condition_variable buffer_empty;
 	};
 
 class CLibretro
@@ -75,7 +73,6 @@ public:
 		std::string description;
 		std::string usevars;
 	};
-	TCHAR corepath[MAX_PATH];
 	TCHAR inputcfg_path[MAX_PATH];
 	TCHAR corevar_path[MAX_PATH];
 	std::vector<core_vars> variables;
@@ -88,9 +85,6 @@ public:
 	static	CLibretro* GetSingleton( ) ;
 	CLibretro();
 	~CLibretro();
-	double fps;
-	double target_fps;
-	double target_samplerate;
 	DWORD rate;
 	bool paused;
 	std::list<double> listDeltaMA;
@@ -107,10 +101,8 @@ public:
 	bool savestate(TCHAR* filename, bool save = false);
 	void kill();
 	BOOL isEmulating;
-
 	void core_audio_sample(int16_t left, int16_t right);
 	size_t core_audio_sample_batch(const int16_t *data, size_t frames);
-
 	int16_t*                        _samples;
 	size_t                          _samplesCount;
 	Audio * _audio;

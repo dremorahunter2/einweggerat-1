@@ -234,8 +234,7 @@ public:
 		fp = _wfopen(retro->corevar_path, L"w");
 		fwrite(data, 1, size, fp);
 		fclose(fp);
-		free(data);
-		
+		free(data);	
 	}
 
 	LRESULT OnOK(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/)

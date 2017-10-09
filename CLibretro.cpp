@@ -72,7 +72,6 @@ mal_uint32 Audio::fill_buffer(uint8_t* out, mal_uint32 count) {
 
 	void Audio::mix(const int16_t* samples, size_t frames, int64_t fps)
 	{
-		buf_ready = false;
 		if (!frames)return;
 		uint32_t in_len = frames * 2 * sizeof(int16_t);
 		std::unique_lock<std::mutex> l(lock);
