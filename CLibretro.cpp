@@ -29,9 +29,10 @@ mal_uint32 Audio::fill_buffer(uint8_t* out, mal_uint32 count) {
 	std::lock_guard<std::mutex> lg(mutex);	
 	size_t avail = fifo_read_avail(_fifo);
 	size_t write_size =count > avail ? avail : count;
-	fifo_read(_fifo, out,write_size);
 	buffer_full.notify_all();
+	fifo_read(_fifo, out,write_size);
 	memset(out + write_size, 0, count - write_size);
+	
 	return count;
 }
 
