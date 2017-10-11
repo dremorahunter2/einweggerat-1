@@ -290,6 +290,7 @@ public:
 
 	LRESULT OnOK(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 	{
+		input->bl = bl->copy();
 		Std_File_Writer_u out2;
 		if (!out2.open(input->path))
 		{
@@ -333,9 +334,7 @@ public:
 			remove_from_list(assign, n);
 			add_to_list(assign, last_event, action, n,description);
 			bl->replace(n, last_event, action,description,retro_id);
-			input = input::GetSingleton();
-			input->bl = bl;
-			input->guids = guids;
+			
 		}
 		ListView_SetSelectionMark(assign, n);
 		editevent.SetWindowTextW(L"");
