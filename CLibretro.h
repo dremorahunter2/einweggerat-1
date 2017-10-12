@@ -32,6 +32,7 @@ extern "C" {
 	public:
 	Audio(double srate)
 	{
+		drc_capac = 512;
 		init(srate);
 	}
 	~Audio()
@@ -41,6 +42,8 @@ extern "C" {
 	bool init(unsigned sample_rate);
 	void destroy();
 	void reset();
+	bool setRate(double rate);
+	void drc();
 	void mix(const int16_t* samples, size_t sample_count);
 	mal_uint32 fill_buffer(uint8_t* pSamples, mal_uint32 samplecount);
 	mal_context context;
@@ -55,8 +58,14 @@ extern "C" {
 	float          _scale;
 	const int16_t* _samples;
 	size_t         _frames;
+	float fps;
 	std::mutex lock;
 	std::condition_variable buffer_full;
+	std::chrono::time_point<std::chrono::system_clock> start, end;
+	double getDeltaMovingAverage();
+	void sync_video_tick(void);
+	std::vector<double> listDeltaMA;
+	int drc_capac;
 	};
 
 class CLibretro

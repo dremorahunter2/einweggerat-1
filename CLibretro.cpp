@@ -8,13 +8,32 @@
 #include "gui/utf8conv.h"
 #define INI_IMPLEMENTATION
 #include "ini.h"
-
-
+#include <algorithm>
 using namespace std;
 using namespace utf8util;
 
 #define SAMPLE_COUNT 8192
 #define INLINE 
+
+static struct {
+	HMODULE handle;
+	bool initialized;
+
+	void(*retro_init)(void);
+	void(*retro_deinit)(void);
+	unsigned(*retro_api_version)(void);
+	void(*retro_get_system_info)(struct retro_system_info *info);
+	void(*retro_get_system_av_info)(struct retro_system_av_info *info);
+	void(*retro_set_controller_port_device)(unsigned port, unsigned device);
+	void(*retro_reset)(void);
+	void(*retro_run)(void);
+	size_t(*retro_serialize_size)(void);
+	bool(*retro_serialize)(void *data, size_t size);
+	bool(*retro_unserialize)(const void *data, size_t size);
+	bool(*retro_load_game)(const struct retro_game_info *game);
+	//	bool retro_load_game_special(unsigned game_type, const struct retro_game_info *info, size_t num_info);
+	void(*retro_unload_game)(void);
+} g_retro;
 
 static mal_uint32 sdl_audio_callback(mal_device* pDevice, mal_uint32 frameCount, void* pSamples)
 {
@@ -32,75 +51,161 @@ mal_uint32 Audio::fill_buffer(uint8_t* out, mal_uint32 count) {
 	buffer_full.notify_all();
 	fifo_read(_fifo, out,write_size);
 	memset(out + write_size, 0, count - write_size);
-	
 	return count;
+}
+
+long long milliseconds_now() {
+	static LARGE_INTEGER s_frequency;
+	static BOOL s_use_qpc = QueryPerformanceFrequency(&s_frequency);
+	if (s_use_qpc) {
+		LARGE_INTEGER now;
+		QueryPerformanceCounter(&now);
+		return (1000LL * now.QuadPart) / s_frequency.QuadPart;
+	}
+	else {
+		return GetTickCount();
+	}
+}
+void Audio::drc()
+{
+	static uint64_t fps_time = 0;
+	uint64_t now = ::milliseconds_now();
+	{
+		fps = (1000.0) / (now - fps_time);
+		fps_time = now;
+	}
+	if (listDeltaMA.size() == drc_capac)
+	{
+		drc_capac = 2048;
+		double sum = 0;
+		for (std::vector<double>::iterator p = listDeltaMA.begin(); p != listDeltaMA.end(); ++p)
+		sum += (double)*p;
+		float avg = sum / listDeltaMA.size();
+
+		//size_t n = listDeltaMA.size() / 2;
+	//	std::nth_element(listDeltaMA.begin(), listDeltaMA.begin() + n, listDeltaMA.end());
+	//	float avg = listDeltaMA[n];
+		
+		listDeltaMA.clear();
+		retro_system_av_info av = { 0 };
+		g_retro.retro_get_system_av_info(&av);
+		int available = fifo_write_avail(_fifo);
+		int total = SAMPLE_COUNT;
+		int low_water_size = (unsigned)(total * 3 / 4);
+		assert(total != 0);
+		int half = total / 2;
+		int delta_half = available - half;
+		double adjust = 1.0 + 0.005 * ((double)delta_half / half);
+		bool underrun = (available < low_water_size);
+		if (avg > 60)
+			avg = av.timing.fps;
+		else if ((avg < av.timing.fps) && underrun) {
+			double sampleRate = av.timing.sample_rate * avg / av.timing.fps;
+			setRate(sampleRate);
+		}
+	}
+	listDeltaMA.push_back(fps);	
+}
+
+
+bool Audio::init(unsigned sample_rate)
+{
+	_opened = true;
+	_mute = false;
+	_scale = 1.0f;
+	_samples = NULL;
+	_coreRate = 0;
+	_resampler = NULL;
+	_sampleRate = 44100;
+	setRate(sample_rate);
+	if (mal_context_init(NULL, 0, &context) != MAL_SUCCESS) {
+		printf("Failed to initialize context.");
+		return false;
+	}
+	config = mal_device_config_init_playback(mal_format_s16, 2, _sampleRate, ::sdl_audio_callback);
+	config.bufferSizeInFrames = 1024;
+	_fifo = fifo_new(SAMPLE_COUNT);
+	if (mal_device_init(&context, mal_device_type_playback, NULL, &config, this, &device) != MAL_SUCCESS) {
+		mal_context_uninit(&context);
+		return false;
+	}
+	mal_device_start(&device);
+	start = std::chrono::system_clock::now();
+	fps = 0.0f;
+	listDeltaMA.clear();
+	return true;
+}
+void Audio::destroy()
+{
+	{
+		mal_device_stop(&device);
+		mal_context_uninit(&context);
+		if (_resampler != NULL)
+		{
+			speex_resampler_destroy(_resampler);
+		}
+	}
+}
+void Audio::reset()
+{
+
+}
+
+bool Audio::setRate(double rate)
+{
+	if (_resampler != NULL)
+	{
+		speex_resampler_destroy(_resampler);
+		_resampler = NULL;
+	}
+
+	_coreRate = floor(rate + 0.05);
+
+	if (_coreRate != _sampleRate)
+	{
+		int error;
+		_resampler = speex_resampler_init(2, _coreRate, _sampleRate, SPEEX_RESAMPLER_QUALITY_DESKTOP, &error);
+	}
+	return true;
+
+}
+
+void Audio::mix(const int16_t* samples, size_t frames)
+{
+	//_samples = samples;
+	_frames = frames;
+	uint32_t in_len = frames * 2;
+	drc();
+	uint32_t out_len = trunc((uint32_t)(in_len * _sampleRate / _coreRate)) + 1;
+	int16_t* output = (int16_t*)alloca(out_len * 2);
+
+	if (output == NULL)
+	{
+		return;
+	}
+
+	if (_resampler != NULL)
+	{
+		int error = speex_resampler_process_int(_resampler, 0, samples, &in_len, output, &out_len);
+	}
+	else
+	{
+		memcpy(output, samples, out_len * 2);
+	}
+
+	int size = out_len * 2;
+	std::unique_lock<std::mutex> l(lock);
+	buffer_full.wait(l, [this, size]() {return size < fifo_write_avail(_fifo); });
+
+	fifo_write(_fifo, output, size);
+
 }
 
 
 
-	bool Audio::init(unsigned sample_rate)
-	{
-		_opened = true;
-		_mute = false;
-		_scale = 1.0f;
-		_samples = NULL;
-		_coreRate = 0;
-		_resampler = NULL;
-		_sampleRate = sample_rate;
-		if (mal_context_init(NULL, 0, &context) != MAL_SUCCESS) {
-			printf("Failed to initialize context.");
-			return false;
-		}
-		config = mal_device_config_init_playback(mal_format_s16, 2,_sampleRate, ::sdl_audio_callback);
-		config.bufferSizeInFrames =1024;
-		_fifo = fifo_new(SAMPLE_COUNT);
-		if (mal_device_init(&context, mal_device_type_playback, NULL, &config, this, &device) != MAL_SUCCESS) {
-			mal_context_uninit(&context);
-			return false;
-		}
-		mal_device_start(&device);
-		return true;
-	}
-	void Audio::destroy()
-	{
-		mal_device_uninit(&device);
-		mal_context_uninit(&context);	
-	}
-	void Audio::reset()
-	{
-
-	}
-
-	void Audio::mix(const int16_t* samples, size_t sample_count)
-	{
-		if (!sample_count)return;
-		uint32_t in_len = sample_count * sizeof(int16_t);
-		std::unique_lock<std::mutex> l(lock);
-		buffer_full.wait(l, [this, in_len]() {return in_len < fifo_write_avail(_fifo); });
-		fifo_write(_fifo, samples, in_len);
-	}
 
 
 
-static struct {
-	HMODULE handle;
-	bool initialized;
-
-	void(*retro_init)(void);
-	void(*retro_deinit)(void);
-	unsigned(*retro_api_version)(void);
-	void(*retro_get_system_info)(struct retro_system_info *info);
-	void(*retro_get_system_av_info)(struct retro_system_av_info *info);
-	void(*retro_set_controller_port_device)(unsigned port, unsigned device);
-	void(*retro_reset)(void);
-	void(*retro_run)(void);
-	size_t (*retro_serialize_size)(void);
-	bool (*retro_serialize)(void *data, size_t size);
-	bool (*retro_unserialize)(const void *data, size_t size);
-	bool(*retro_load_game)(const struct retro_game_info *game);
-	//	bool retro_load_game_special(unsigned game_type, const struct retro_game_info *info, size_t num_info);
-	void(*retro_unload_game)(void);
-} g_retro;
 
 static void core_unload() {
 	if (g_retro.initialized)
@@ -619,20 +724,6 @@ CLibretro::~CLibretro(void)
 	kill();
 }
 
-
-long long milliseconds_now() {
-	static LARGE_INTEGER s_frequency;
-	static BOOL s_use_qpc = QueryPerformanceFrequency(&s_frequency);
-	if (s_use_qpc) {
-		LARGE_INTEGER now;
-		QueryPerformanceCounter(&now);
-		return (1000LL * now.QuadPart) / s_frequency.QuadPart;
-	}
-	else {
-		return GetTickCount();
-	}
-}
-
 #include <sys/stat.h>
 
 bool CLibretro::loadfile(TCHAR* filename, TCHAR* core_filename,bool gamespecificoptions)
@@ -735,16 +826,9 @@ DWORD WINAPI CLibretro::libretro_thread(void* Param)
 	memset(&lpDevMode, 0, sizeof(DEVMODE));
 	lpDevMode.dmSize = sizeof(DEVMODE);
 	lpDevMode.dmDriverExtra = 0;
-	if (EnumDisplaySettings(NULL, ENUM_CURRENT_SETTINGS, &lpDevMode) == 0) {
-		orig_ratio = (double)60 / av.timing.fps; // default value if cannot retrieve from user settings.
-	}
-	else
-	{
-		orig_ratio = (double)lpDevMode.dmDisplayFrequency / av.timing.fps;
-	}
 	This->_samples = (int16_t*)malloc(SAMPLE_COUNT);
 	memset(This->_samples, 0, SAMPLE_COUNT);
-	This->_audio = new Audio(av.timing.sample_rate*orig_ratio);
+	This->_audio = new Audio(av.timing.sample_rate);
 	
 	This->listDeltaMA.clear();
 	This->frame_count = 0;
@@ -788,7 +872,7 @@ void CLibretro::run()
 				g_retro.retro_run();
 			}
 		}
-		_audio->mix(_samples, _samplesCount);
+		_audio->mix(_samples, _samplesCount/2);
 		
 	}
 	
