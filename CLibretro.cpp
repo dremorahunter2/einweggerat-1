@@ -83,8 +83,8 @@ void Audio::drc()
 		float avg = sum / listDeltaMA.size();
 
 		//size_t n = listDeltaMA.size() / 2;
-	//	std::nth_element(listDeltaMA.begin(), listDeltaMA.begin() + n, listDeltaMA.end());
-	//	float avg = listDeltaMA[n];
+		//std::nth_element(listDeltaMA.begin(), listDeltaMA.begin() + n, listDeltaMA.end());
+		//float avg = listDeltaMA[n];
 		
 		listDeltaMA.clear();
 		retro_system_av_info av = { 0 };
@@ -95,12 +95,10 @@ void Audio::drc()
 		assert(total != 0);
 		int half = total / 2;
 		int delta_half = available - half;
-		double adjust = 1.0 + 0.005 * ((double)delta_half / half);
+		double adjust = 1.0 + skew * ((double)delta_half / half);
 		bool underrun = (available < low_water_size);
-		if (avg > 60)
-			avg = av.timing.fps;
-		else if ((avg < av.timing.fps) && underrun) {
-			double sampleRate = av.timing.sample_rate * avg / av.timing.fps;
+		if ((avg < refreshrate) && underrun) {
+			double sampleRate = av.timing.sample_rate *adjust;
 			setRate(sampleRate);
 		}
 	}
@@ -178,6 +176,7 @@ void Audio::mix(const int16_t* samples, size_t frames)
 	drc();
 	uint32_t out_len = trunc((uint32_t)(in_len * _sampleRate / _coreRate)) + 1;
 	int16_t* output = (int16_t*)alloca(out_len * 2);
+	memset(output, 0, out_len * 2);
 
 	if (output == NULL)
 	{
@@ -811,6 +810,8 @@ bool CLibretro::loadfile(TCHAR* filename, TCHAR* core_filename,bool gamespecific
 	return true;
 }
 
+#include <dwmapi.h>
+#pragma comment (lib,"dwmapi.lib")
 
 DWORD WINAPI CLibretro::libretro_thread(void* Param)
 {
@@ -828,7 +829,15 @@ DWORD WINAPI CLibretro::libretro_thread(void* Param)
 	lpDevMode.dmDriverExtra = 0;
 	This->_samples = (int16_t*)malloc(SAMPLE_COUNT);
 	memset(This->_samples, 0, SAMPLE_COUNT);
-	This->_audio = new Audio(av.timing.sample_rate);
+
+
+	DWM_TIMING_INFO timing_info;
+	timing_info.cbSize = sizeof(timing_info);
+	HRESULT result = DwmGetCompositionTimingInfo(NULL, &timing_info);
+	double refreshr = timing_info.rateRefresh.uiNumerator/ 1000;
+	double time_skew = fabs(1.0f - av.timing.fps / refreshr);
+	orig_ratio = (double)refreshr / av.timing.fps;
+	This->_audio = new Audio(av.timing.sample_rate*orig_ratio,refreshr,time_skew);
 	
 	This->listDeltaMA.clear();
 	This->frame_count = 0;

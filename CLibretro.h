@@ -30,9 +30,11 @@ extern "C" {
 	{
 	
 	public:
-	Audio(double srate)
+	Audio(double srate, double refreshra, double ts)
 	{
+		skew = ts;
 		drc_capac = 512;
+		refreshrate = refreshra;
 		init(srate);
 	}
 	~Audio()
@@ -59,6 +61,8 @@ extern "C" {
 	const int16_t* _samples;
 	size_t         _frames;
 	float fps;
+	double refreshrate;
+	double skew;
 	std::mutex lock;
 	std::condition_variable buffer_full;
 	std::chrono::time_point<std::chrono::system_clock> start, end;

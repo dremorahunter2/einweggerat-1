@@ -9,7 +9,7 @@ static const PIXELFORMATDESCRIPTOR pfd =
 {
 	sizeof(PIXELFORMATDESCRIPTOR),
 	1,
-	PFD_DRAW_TO_WINDOW | PFD_SUPPORT_OPENGL | PFD_DOUBLEBUFFER,
+	PFD_DRAW_TO_WINDOW | PFD_SUPPORT_OPENGL,
 	PFD_TYPE_RGBA,
 	32,
 	0, 0, 0, 0, 0, 0, 0, 0,
@@ -53,6 +53,51 @@ static const char *g_fshader_src =
 "gl_FragColor = texture2D(u_tex, o_coord);\n"
 "}";
 
+struct _GPU_DEVICE {
+	DWORD  cb;
+	CHAR   DeviceName[32];
+	CHAR   DeviceString[128];
+	DWORD  Flags;
+	RECT   rcVirtualScreen;
+};
+DECLARE_HANDLE(HPBUFFERARB);
+DECLARE_HANDLE(HPBUFFEREXT);
+DECLARE_HANDLE(HVIDEOOUTPUTDEVICENV);
+DECLARE_HANDLE(HPVIDEODEV);
+DECLARE_HANDLE(HPGPUNV);
+DECLARE_HANDLE(HGPUNV);
+DECLARE_HANDLE(HVIDEOINPUTDEVICENV);
+typedef struct _GPU_DEVICE GPU_DEVICE;
+typedef struct _GPU_DEVICE *PGPU_DEVICE;
+#define WGL_ACCESS_READ_ONLY_NV 0x00000000
+#define WGL_ACCESS_READ_WRITE_NV 0x00000001
+#define WGL_ACCESS_WRITE_DISCARD_NV 0x00000002
+#define WGL_NV_DX_interop 1
+int GLAD_WGL_NV_DX_interop;
+typedef BOOL(APIENTRYP PFNWGLDXSETRESOURCESHAREHANDLENVPROC)(void *dxObject, HANDLE shareHandle);
+PFNWGLDXSETRESOURCESHAREHANDLENVPROC glad_wglDXSetResourceShareHandleNV;
+#define wglDXSetResourceShareHandleNV glad_wglDXSetResourceShareHandleNV
+typedef HANDLE(APIENTRYP PFNWGLDXOPENDEVICENVPROC)(void *dxDevice);
+PFNWGLDXOPENDEVICENVPROC glad_wglDXOpenDeviceNV;
+#define wglDXOpenDeviceNV glad_wglDXOpenDeviceNV
+typedef BOOL(APIENTRYP PFNWGLDXCLOSEDEVICENVPROC)(HANDLE hDevice);
+ PFNWGLDXCLOSEDEVICENVPROC glad_wglDXCloseDeviceNV;
+#define wglDXCloseDeviceNV glad_wglDXCloseDeviceNV
+typedef HANDLE(APIENTRYP PFNWGLDXREGISTEROBJECTNVPROC)(HANDLE hDevice, void *dxObject, GLuint name, GLenum type, GLenum access);
+PFNWGLDXREGISTEROBJECTNVPROC glad_wglDXRegisterObjectNV;
+#define wglDXRegisterObjectNV glad_wglDXRegisterObjectNV
+typedef BOOL(APIENTRYP PFNWGLDXUNREGISTEROBJECTNVPROC)(HANDLE hDevice, HANDLE hObject);
+ PFNWGLDXUNREGISTEROBJECTNVPROC glad_wglDXUnregisterObjectNV;
+#define wglDXUnregisterObjectNV glad_wglDXUnregisterObjectNV
+typedef BOOL(APIENTRYP PFNWGLDXOBJECTACCESSNVPROC)(HANDLE hObject, GLenum access);
+ PFNWGLDXOBJECTACCESSNVPROC glad_wglDXObjectAccessNV;
+#define wglDXObjectAccessNV glad_wglDXObjectAccessNV
+typedef BOOL(APIENTRYP PFNWGLDXLOCKOBJECTSNVPROC)(HANDLE hDevice, GLint count, HANDLE *hObjects);
+ PFNWGLDXLOCKOBJECTSNVPROC glad_wglDXLockObjectsNV;
+#define wglDXLockObjectsNV glad_wglDXLockObjectsNV
+typedef BOOL(APIENTRYP PFNWGLDXUNLOCKOBJECTSNVPROC)(HANDLE hDevice, GLint count, HANDLE *hObjects);
+PFNWGLDXUNLOCKOBJECTSNVPROC glad_wglDXUnlockObjectsNV;
+#define wglDXUnlockObjectsNV glad_wglDXUnlockObjectsNV
 
 
 
@@ -82,6 +127,47 @@ GLuint compile_shader(unsigned type, unsigned count, const char **strings) {
 	}
 
 	return shader;
+}
+
+void AllocRenderTarget()
+{
+	glGenTextures(1, &g_video.blit_tex);
+	glBindTexture(GL_TEXTURE_2D, g_video.blit_fbo);
+	glGenFramebuffers(1, &g_video.blit_fbo);
+	glBindFramebuffer(GL_FRAMEBUFFER, g_video.blit_fbo);
+	glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, g_video.blit_tex, 0);
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+
+	RECT wndsize;
+	GetClientRect(g_video.D3D_hwnd , &wndsize);
+	HANDLE share_handle = NULL;
+	g_video.D3D_device->CreateRenderTarget(wndsize.right, wndsize.bottom, D3DFMT_X8R8G8B8, D3DMULTISAMPLE_NONE,
+		0, false, &g_video.D3D_GLtarget, &share_handle);
+
+	wglDXSetResourceShareHandleNV(g_video.D3D_GLtarget, share_handle);
+	g_video.GL_htexture = wglDXRegisterObjectNV(g_video.D3D_sharehandle, g_video.D3D_GLtarget, g_video.blit_tex,
+		GL_TEXTURE_2D, WGL_ACCESS_WRITE_DISCARD_NV);
+
+	wglDXLockObjectsNV(g_video.D3D_sharehandle, 1, &g_video.GL_htexture);
+}
+
+/*private*/ void DeallocRenderTarget()
+{
+	if (!g_video.D3D_GLtarget) return;
+	glDeleteTextures(1, &g_video.blit_tex);
+	glDeleteFramebuffers(1, &g_video.blit_fbo);
+
+	wglDXUnlockObjectsNV(g_video.D3D_sharehandle, 1, &g_video.GL_htexture);
+	wglDXUnregisterObjectNV(g_video.D3D_sharehandle, g_video.GL_htexture);
+	g_video.GL_htexture = NULL;
+	g_video.D3D_GLtarget->Release();
+	g_video.D3D_GLtarget = NULL;
+
+	//those D3D share handles are weird stuff like 0xC0007000, closing them throws errors
+	//I'll assume it's freed by deleting the rendertarget, device or IDirect3D9Ex, and that reusing it does not leak
+	//CloseHandle(D3D_sharetexture);
+	//D3D_sharetexture = NULL;
 }
 
 
@@ -122,15 +208,17 @@ void init_shaders() {
 
 	float m[4][4];
 	if (g_video.hw.bottom_left_origin)
-		ortho2d(m, -1, 1, 1, -1);
-	else
 		ortho2d(m, -1, 1, -1, 1);
-
+	else
+		ortho2d(m, -1, 1, 1, -1);
 	glUniformMatrix4fv(g_shader.u_mvp, 1, GL_FALSE, (float*)m);
-
 	glUseProgram(0);
 }
 
+
+typedef HRESULT(WINAPI * Direct3DCreate9Ex_t)(UINT SDKVersion, IDirect3D9Ex* * ppD3D);
+static HMODULE hD3D9 = NULL;
+static Direct3DCreate9Ex_t lpDirect3DCreate9Ex;
 
 void refresh_vertex_data() {
 
@@ -207,10 +295,33 @@ void init_framebuffer(int width, int height)
 	glClear(GL_COLOR_BUFFER_BIT);
 
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+	g_video.D3D_sharehandle = wglDXOpenDeviceNV(g_video.D3D_device);
+	g_video.D3D_device->GetBackBuffer(0, 0, D3DBACKBUFFER_TYPE_MONO, &g_video.D3D_backbuf);
+
+
+	
+	AllocRenderTarget();
+	
+	g_video.alloc_framebuf = true;
+
 }
 
 
 void resize_cb(int w, int h) {
+	
+	if (g_video.alloc_framebuf)
+	{
+		if (g_video.last_w != w || g_video.last_h != h)
+		{
+			DeallocRenderTarget();
+			AllocRenderTarget();
+		}
+		g_video.last_w = w;
+		g_video.last_h = h;
+	}
+	
+	
 	int32_t vp_width = w;
 	int32_t vp_height = h;
 	//glViewport(0, 0, vp_width, vp_height);
@@ -238,15 +349,23 @@ void resize_cb(int w, int h) {
 	glViewport(vp_x, vp_y, vp_width, vp_height);
 }
 
-void create_window(int width, int height, HWND hwnd) {
 
-	g_video.hwnd = hwnd;
-	g_video.hDC = GetDC(hwnd);
+
+
+void create_window(int width, int height, HWND hwnd) {
+	static const wchar_t os_wnd_class[] = L"einweggerat fake OGL";
+	WNDCLASS wc = {};
+		wc.lpfnWndProc = DefWindowProc;
+		wc.lpszClassName = os_wnd_class;
+		RegisterClass(&wc);
+	g_video.gl_hwnd = CreateWindowExW(0, os_wnd_class, os_wnd_class, 0, 0, 0, 1,1, NULL, NULL, GetModuleHandle(NULL), NULL);
+
+	g_video.hDC = GetDC(g_video.gl_hwnd);
 
 	unsigned int	PixelFormat;
 	PixelFormat = ChoosePixelFormat(g_video.hDC, &pfd);
 	SetPixelFormat(g_video.hDC, PixelFormat, &pfd);
-	gladLoadGL();
+
 	if (g_video.hw.context_type == RETRO_HW_CONTEXT_OPENGL_CORE)
 	{
 		GLint attribs_core[] =
@@ -284,15 +403,47 @@ void create_window(int width, int height, HWND hwnd) {
 	}
 
 	gladLoadGL();
-	init_shaders();
-	resize_cb(width, height);
+	glad_wglDXSetResourceShareHandleNV = (PFNWGLDXSETRESOURCESHAREHANDLENVPROC)wglGetProcAddress("wglDXSetResourceShareHandleNV");
+	glad_wglDXOpenDeviceNV = (PFNWGLDXOPENDEVICENVPROC)wglGetProcAddress("wglDXOpenDeviceNV");
+	glad_wglDXCloseDeviceNV = (PFNWGLDXCLOSEDEVICENVPROC)wglGetProcAddress("wglDXCloseDeviceNV");
+	glad_wglDXRegisterObjectNV = (PFNWGLDXREGISTEROBJECTNVPROC)wglGetProcAddress("wglDXRegisterObjectNV");
+	glad_wglDXUnregisterObjectNV = (PFNWGLDXUNREGISTEROBJECTNVPROC)wglGetProcAddress("wglDXUnregisterObjectNV");
+	glad_wglDXObjectAccessNV = (PFNWGLDXOBJECTACCESSNVPROC)wglGetProcAddress("wglDXObjectAccessNV");
+	glad_wglDXLockObjectsNV = (PFNWGLDXLOCKOBJECTSNVPROC)wglGetProcAddress("wglDXLockObjectsNV");
+	glad_wglDXUnlockObjectsNV = (PFNWGLDXUNLOCKOBJECTSNVPROC)wglGetProcAddress("wglDXUnlockObjectsNV");
+	g_video.D3D_sharehandle = NULL;
+	g_video.D3D_sharetexture = NULL;
+	g_video.GL_htexture = NULL;
+	hD3D9 = LoadLibrary(L"d3d9.dll");
+	lpDirect3DCreate9Ex = (Direct3DCreate9Ex_t)GetProcAddress(hD3D9, "Direct3DCreate9Ex");
+	IDirect3D9Ex* d3d;
+	g_video.D3D_device = NULL;
+	g_video.D3D_hwnd = hwnd;
+	lpDirect3DCreate9Ex(D3D_SDK_VERSION, &d3d);
 
-	typedef bool (APIENTRY *PFNWGLSWAPINTERVALFARPROC)(int);
-	PFNWGLSWAPINTERVALFARPROC wglSwapIntervalEXT = 0;
-	wglSwapIntervalEXT =
-		(PFNWGLSWAPINTERVALFARPROC)wglGetProcAddress("wglSwapIntervalEXT");
-	if (wglSwapIntervalEXT)
-		wglSwapIntervalEXT(1);
+	RECT clientRect;
+	GetClientRect(g_video.D3D_hwnd, &clientRect);
+	D3DPRESENT_PARAMETERS parameters = {};
+	parameters.BackBufferCount = 2; // D3DPRESENT_FORCEIMMEDIATE|D3DPRESENT_DONOTWAIT doesn't work without this
+	parameters.SwapEffect = D3DSWAPEFFECT_FLIPEX;
+	parameters.hDeviceWindow = g_video.D3D_hwnd;
+	parameters.Windowed = TRUE;
+	//https://msdn.microsoft.com/en-us/library/windows/desktop/bb172585(v=vs.85).aspx
+	//_ONE is _DEFAULT, but also calls timeBeginPeriod to improve precision
+	//anything opting in to Direct3D vsync is clearly a high-performance program, and thus wants the increased precision
+	parameters.PresentationInterval = D3DPRESENT_INTERVAL_ONE;
+
+	d3d->CreateDeviceEx(D3DADAPTER_DEFAULT, D3DDEVTYPE_HAL, g_video.D3D_hwnd,
+		D3DCREATE_MIXED_VERTEXPROCESSING | D3DCREATE_MULTITHREADED,
+		&parameters, NULL, &g_video.D3D_device);
+	d3d->Release();
+	init_shaders();
+
+	g_video.last_w = 0;
+	g_video.last_h = 0;
+
+
+	
 
 	if (g_video.hw.context_reset)g_video.hw.context_reset();
 	g_win = true;
@@ -350,7 +501,7 @@ BOOL CenterWindow(HWND hwndWindow)
 
 void video_configure(const struct retro_game_geometry *geom, HWND hwnd) {
 	int nwidth = 0, nheight = 0;
-
+	g_video.alloc_framebuf = false;
 	resize_to_aspect(geom->aspect_ratio, geom->base_width * 1, geom->base_height * 1, &nwidth, &nheight);
 
 	nwidth *= 1;
@@ -367,9 +518,6 @@ void video_configure(const struct retro_game_geometry *geom, HWND hwnd) {
 
 	if (!g_video.pixfmt)
 		g_video.pixfmt = GL_UNSIGNED_SHORT_5_5_5_1;
-
-	int screenWidth = GetSystemMetrics(SM_CXSCREEN);
-	int screenHeight = GetSystemMetrics(SM_CYSCREEN);
 	CenterWindow(hwnd);
 
 	glGenTextures(1, &g_video.tex_id);
@@ -429,10 +577,15 @@ void video_refresh(const void *data, unsigned width, unsigned height, unsigned p
 	{
 		g_video.clip_h = height;
 		g_video.clip_w = width;
-
-		refresh_vertex_data();
+		refresh_vertex_data();	
 	}
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	glBindFramebuffer(GL_FRAMEBUFFER, g_video.blit_fbo);
+
+
+	RECT clientRect;
+	GetClientRect(g_video.D3D_hwnd, &clientRect);
+	resize_cb(clientRect.right, clientRect.bottom);
+
 	glBindTexture(GL_TEXTURE_2D, g_video.tex_id);
 
 	if (pitch != g_video.pitch) {
@@ -444,11 +597,6 @@ void video_refresh(const void *data, unsigned width, unsigned height, unsigned p
 		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, width, height,
 			g_video.pixtype, g_video.pixfmt, data);
 	}
-
-	RECT clientRect;
-
-	GetClientRect(g_video.hwnd, &clientRect);
-	resize_cb(clientRect.right, clientRect.bottom);
 
 	glClear(GL_COLOR_BUFFER_BIT);
 
@@ -463,11 +611,25 @@ void video_refresh(const void *data, unsigned width, unsigned height, unsigned p
 	glBindVertexArray(0);
 
 	glUseProgram(0);
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-	SwapBuffers(g_video.hDC);
+
+	wglDXUnlockObjectsNV(g_video.D3D_sharehandle, 1, &g_video.GL_htexture);
+	g_video.D3D_device->StretchRect(g_video.D3D_GLtarget,NULL, g_video.D3D_backbuf, NULL, D3DTEXF_NONE);
+	g_video.D3D_device->PresentEx(NULL, NULL, NULL, NULL, D3DPRESENT_DONOTWAIT);
+	wglDXLockObjectsNV(g_video.D3D_sharehandle, 1, &g_video.GL_htexture);
 }
 
 void video_deinit() {
+	DeallocRenderTarget();
+
+	if (g_video.D3D_sharehandle) wglDXCloseDeviceNV(g_video.D3D_sharehandle);
+
+	if (g_video.D3D_device) g_video.D3D_device->Release();
+	if (g_video.D3D_backbuf)g_video.D3D_backbuf->Release();
+
+	FreeLibrary(hD3D9);
+
 	if (g_video.tex_id)
 	{
 		glDeleteTextures(1, &g_video.tex_id);
@@ -497,6 +659,6 @@ void video_deinit() {
 		wglDeleteContext(g_video.hRC);
 	}
 
-	if (g_video.hDC) ReleaseDC(g_video.hwnd, g_video.hDC);
+	if (g_video.hDC) ReleaseDC(g_video.gl_hwnd, g_video.hDC);
 
 }

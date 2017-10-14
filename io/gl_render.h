@@ -1,6 +1,6 @@
 #ifndef _gl_render_h_
 #define _gl_render_h_
-
+#include <d3d9.h>
 #include "glad.h"
 void video_deinit();
 bool video_set_pixel_format(unsigned format);
@@ -14,7 +14,12 @@ typedef struct{
 
 	int glmajor;
 	int glminor;
+	int last_h;
+	int last_w;
 
+
+	GLuint blit_tex;
+	GLuint blit_fbo;
 
 	GLuint pitch;
 	GLint tex_w, tex_h;
@@ -26,8 +31,22 @@ typedef struct{
 
 	HDC   hDC;
 	HGLRC hRC;
-	HWND hwnd;
+	HWND gl_hwnd;
+	bool alloc_framebuf;
+	HWND window_hwnd;
 	struct retro_hw_render_callback hw;
+
+
+	HWND D3D_hwnd;
+
+	IDirect3DDevice9Ex* D3D_device;
+	IDirect3DSurface9* D3D_backbuf;
+	IDirect3DSurface9* D3D_GLtarget;
+
+	HANDLE D3D_sharehandle;
+	HANDLE D3D_sharetexture;
+	HANDLE GL_htexture;
+
 }video;
 extern video g_video;
 
