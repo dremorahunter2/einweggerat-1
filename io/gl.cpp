@@ -616,7 +616,7 @@ void video_refresh(const void *data, unsigned width, unsigned height, unsigned p
 
 	wglDXUnlockObjectsNV(g_video.D3D_sharehandle, 1, &g_video.GL_htexture);
 	g_video.D3D_device->StretchRect(g_video.D3D_GLtarget,NULL, g_video.D3D_backbuf, NULL, D3DTEXF_NONE);
-	g_video.D3D_device->PresentEx(NULL, NULL, NULL, NULL, D3DPRESENT_DONOTWAIT);
+	while (D3DERR_WASSTILLDRAWING == g_video.D3D_device->PresentEx(NULL, NULL, NULL, NULL,D3DPRESENT_FORCEIMMEDIATE)) Sleep(1) ;
 	wglDXLockObjectsNV(g_video.D3D_sharehandle, 1, &g_video.GL_htexture);
 }
 

@@ -41,7 +41,7 @@ extern "C" {
 	{
 		destroy();
 	}
-	bool init(unsigned sample_rate);
+	bool init(double sample_rate);
 	void destroy();
 	void reset();
 	bool setRate(double rate);
@@ -61,8 +61,11 @@ extern "C" {
 	const int16_t* _samples;
 	size_t         _frames;
 	float fps;
+	double system_fps;
 	double refreshrate;
 	double skew;
+	double system_rate;
+
 	std::mutex lock;
 	std::condition_variable buffer_full;
 	std::chrono::time_point<std::chrono::system_clock> start, end;

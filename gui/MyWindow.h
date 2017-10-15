@@ -159,7 +159,7 @@ public:
 			string var = retro->variables[i].var;
 			wstring varname = s2ws(retro->variables[i].name);
 			m_grid.InsertItem(i, PropCreateReadOnlyItem(_T(""), st2.c_str()));
-			if (strstr(usedv.c_str(), "enabled") || strstr(usedv.c_str(), "disabled"))
+			if (strcmp(usedv.c_str(), "enabled|disabled") == 0 || strcmp(usedv.c_str(),"disabled|enabled") == 0)
 			{
 				bool check = strstr((char*)var.c_str(), "enabled");
 				m_grid.SetSubItem(i, 1, PropCreateCheckButton(varname.c_str(),check));

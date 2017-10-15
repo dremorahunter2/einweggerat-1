@@ -66,6 +66,19 @@ long long milliseconds_now() {
 		return GetTickCount();
 	}
 }
+
+long long microseconds_now() {
+	static LARGE_INTEGER s_frequency;
+	static BOOL s_use_qpc = QueryPerformanceFrequency(&s_frequency);
+	if (s_use_qpc) {
+		LARGE_INTEGER now;
+		QueryPerformanceCounter(&now);
+		return (1000000LL * now.QuadPart) / s_frequency.QuadPart;
+	}
+	else {
+		return GetTickCount();
+	}
+}
 void Audio::drc()
 {
 	static uint64_t fps_time = 0;
@@ -87,8 +100,7 @@ void Audio::drc()
 		//float avg = listDeltaMA[n];
 		
 		listDeltaMA.clear();
-		retro_system_av_info av = { 0 };
-		g_retro.retro_get_system_av_info(&av);
+	
 		int available = fifo_write_avail(_fifo);
 		int total = SAMPLE_COUNT;
 		int low_water_size = (unsigned)(total * 3 / 4);
@@ -97,17 +109,28 @@ void Audio::drc()
 		int delta_half = available - half;
 		double adjust = 1.0 + skew * ((double)delta_half / half);
 		bool underrun = (available < low_water_size);
-		if ((avg < refreshrate) && underrun) {
-			double sampleRate = av.timing.sample_rate *adjust;
+		//if (avg > system_fps)
+		//	avg = system_fps;
+		if ((avg < system_fps) && underrun) {
+			double sampleRate = system_rate *adjust;
 			setRate(sampleRate);
 		}
 	}
 	listDeltaMA.push_back(fps);	
 }
 
+static retro_time_t frame_limit_minimum_time = 0.0;
+static retro_time_t frame_limit_last_time = 0.0;
 
-bool Audio::init(unsigned sample_rate)
+static const int srate_tab[] = { 8000,11025,16000,22050,24000,32000,44100,48000};
+#define ARRAY_SIZE(x) ((sizeof x) / (sizeof *x))
+bool Audio::init(double ratio)
 {
+	retro_system_av_info av = { 0 };
+	g_retro.retro_get_system_av_info(&av);
+	system_rate = av.timing.sample_rate;
+	system_fps = av.timing.fps;
+	double srate = ratio *system_rate;
 	_opened = true;
 	_mute = false;
 	_scale = 1.0f;
@@ -115,7 +138,14 @@ bool Audio::init(unsigned sample_rate)
 	_coreRate = 0;
 	_resampler = NULL;
 	_sampleRate = 44100;
-	setRate(sample_rate);
+	/*for (int i = 0; i < ARRAY_SIZE(srate_tab); i++)
+	{
+		if (srate_tab[i] == system_rate)
+		{
+			_sampleRate = system_rate;
+			srate = system_rate;
+		}*/
+	setRate(srate);
 	if (mal_context_init(NULL, 0, &context) != MAL_SUCCESS) {
 		printf("Failed to initialize context.");
 		return false;
@@ -131,6 +161,10 @@ bool Audio::init(unsigned sample_rate)
 	start = std::chrono::system_clock::now();
 	fps = 0.0f;
 	listDeltaMA.clear();
+	frame_limit_last_time = microseconds_now();
+	frame_limit_minimum_time = (retro_time_t)roundf(1000000.0f
+		/ (av.timing.fps));
+
 	return true;
 }
 void Audio::destroy()
@@ -194,9 +228,25 @@ void Audio::mix(const int16_t* samples, size_t frames)
 
 	int size = out_len * 2;
 	std::unique_lock<std::mutex> l(lock);
-	buffer_full.wait(l, [this, size]() {return size < fifo_write_avail(_fifo); });
+	buffer_full.wait(l, [this, size]() {return fifo_write_avail(_fifo) > size; });
 
 	fifo_write(_fifo, output, size);
+
+
+	retro_time_t to_sleep_ms = (
+		(frame_limit_last_time + frame_limit_minimum_time)
+		- microseconds_now()) / 1000;
+
+	if (to_sleep_ms > 0)
+	{
+		float sleep_ms = (unsigned)to_sleep_ms;
+		/* Combat jitter a bit. */
+		frame_limit_last_time += frame_limit_minimum_time;
+		Sleep(sleep_ms);
+		return;
+	}
+
+	frame_limit_last_time = microseconds_now();
 
 }
 
@@ -821,23 +871,17 @@ DWORD WINAPI CLibretro::libretro_thread(void* Param)
 	g_retro.retro_get_system_av_info(&av);
 
 	::video_configure(&av.geometry, This->emulator_hwnd);
-	
-	double orig_ratio = 0;
-	DEVMODE lpDevMode;
-	memset(&lpDevMode, 0, sizeof(DEVMODE));
-	lpDevMode.dmSize = sizeof(DEVMODE);
-	lpDevMode.dmDriverExtra = 0;
+
 	This->_samples = (int16_t*)malloc(SAMPLE_COUNT);
 	memset(This->_samples, 0, SAMPLE_COUNT);
 
-
 	DWM_TIMING_INFO timing_info;
 	timing_info.cbSize = sizeof(timing_info);
-	HRESULT result = DwmGetCompositionTimingInfo(NULL, &timing_info);
+	DwmGetCompositionTimingInfo(NULL, &timing_info);
 	double refreshr = timing_info.rateRefresh.uiNumerator/ 1000;
 	double time_skew = fabs(1.0f - av.timing.fps / refreshr);
-	orig_ratio = (double)refreshr / av.timing.fps;
-	This->_audio = new Audio(av.timing.sample_rate*orig_ratio,refreshr,time_skew);
+	double orig_ratio = (double)refreshr / av.timing.fps;
+	This->_audio = new Audio(orig_ratio,refreshr,time_skew);
 	
 	This->listDeltaMA.clear();
 	This->frame_count = 0;
