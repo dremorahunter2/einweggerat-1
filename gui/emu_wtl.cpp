@@ -141,6 +141,16 @@ int Run(LPTSTR cmdline = NULL, int nCmdShow = SW_SHOWDEFAULT)
 
 	}
 
+	if (!AttachConsole(ATTACH_PARENT_PROCESS))
+	{
+		AllocConsole();
+		AttachConsole(GetCurrentProcessId());
+		freopen("CONOUT$", "w", stdout);
+	}
+	else
+	{
+		freopen("CONOUT$", "w", stdout);
+	}
 	cmdline::parser a;
 	a.add<string>("core_name", 'c', "core filename", true, "");
 	a.add<string>("rom_name", 'r', "rom filename", true, "");
@@ -152,12 +162,25 @@ int Run(LPTSTR cmdline = NULL, int nCmdShow = SW_SHOWDEFAULT)
 	bool percore = a.exist("pergame");
 	dlgMain.start((TCHAR*)rom.c_str(), (TCHAR*)core.c_str(), percore);
 	int nRet = theLoop.Run(dlgMain);
-
-
-	
-
-
 	_Module.RemoveMessageLoop();
+	if (GetConsoleWindow() == GetForegroundWindow()) {
+		INPUT ip;
+		// Set up a generic keyboard event.
+		ip.type = INPUT_KEYBOARD;
+		ip.ki.wScan = 0; // hardware scan code for key
+		ip.ki.time = 0;
+		ip.ki.dwExtraInfo = 0;
+
+		// Send the "Enter" key
+		ip.ki.wVk = 0x0D; // virtual-key code for the "Enter" key
+		ip.ki.dwFlags = 0; // 0 for key press
+		SendInput(1, &ip, sizeof(INPUT));
+
+		// Release the "Enter" key
+		ip.ki.dwFlags = KEYEVENTF_KEYUP; // KEYEVENTF_KEYUP for key release
+		SendInput(1, &ip, sizeof(INPUT));
+	}
+	ExitProcess(0);
 	return nRet;
 }
 
