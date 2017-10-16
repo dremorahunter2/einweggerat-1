@@ -736,10 +736,10 @@ bool CLibretro::core_load(TCHAR *sofile,bool gamespecificoptions, TCHAR* filenam
 		PathRemoveExtension(core_filename2);
 		PathStripPath(filez);
 		PathRemoveExtension(filez);
-		lstrcpy(inputcfg_path, core_filename);
-		lstrcpy(corevar_path, core_filename);
-		lstrcat(inputcfg_path, filez);
-		lstrcat(corevar_path, filez);
+		lstrcpy(inputcfg_path, core_filename2);
+		lstrcpy(corevar_path, core_filename2);
+		PathAppend(inputcfg_path, filez);
+		PathAppend(corevar_path, filez);
 		lstrcat(inputcfg_path, L"_input.cfg");
 		lstrcat(corevar_path, L".ini");
 
