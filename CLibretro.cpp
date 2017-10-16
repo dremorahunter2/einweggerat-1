@@ -151,7 +151,7 @@ bool Audio::init(double ratio)
 		return false;
 	}
 	config = mal_device_config_init_playback(mal_format_s16, 2, _sampleRate, ::sdl_audio_callback);
-	config.bufferSizeInFrames = 1024;
+	//config.bufferSizeInFrames = 1024;
 	_fifo = fifo_new(SAMPLE_COUNT);
 	if (mal_device_init(&context, mal_device_type_playback, NULL, &config, this, &device) != MAL_SUCCESS) {
 		mal_context_uninit(&context);
@@ -162,8 +162,7 @@ bool Audio::init(double ratio)
 	fps = 0.0f;
 	listDeltaMA.clear();
 	frame_limit_last_time = microseconds_now();
-	frame_limit_minimum_time = (retro_time_t)roundf(1000000.0f
-		/ (av.timing.fps));
+	frame_limit_minimum_time = (retro_time_t)roundf(1000000.0f/ (av.timing.fps));
 
 	return true;
 }

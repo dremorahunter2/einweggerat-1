@@ -34,6 +34,81 @@ void RedirectIOToConsole()
 	*stdout = *fp;
 	setvbuf(stdout, NULL, _IONBF, 0);
 }
+
+
+
+LPSTR* CommandLineToArgvA(LPSTR lpCmdLine, INT *pNumArgs)
+{
+	int retval;
+	retval = MultiByteToWideChar(CP_ACP, MB_ERR_INVALID_CHARS, lpCmdLine, -1, NULL, 0);
+	if (!SUCCEEDED(retval))
+		return NULL;
+
+	LPWSTR lpWideCharStr = (LPWSTR)malloc(retval * sizeof(WCHAR));
+	if (lpWideCharStr == NULL)
+		return NULL;
+
+	retval = MultiByteToWideChar(CP_ACP, MB_ERR_INVALID_CHARS, lpCmdLine, -1, lpWideCharStr, retval);
+	if (!SUCCEEDED(retval))
+	{
+		free(lpWideCharStr);
+		return NULL;
+	}
+
+	int numArgs;
+	LPWSTR* args;
+	args = CommandLineToArgvW(lpWideCharStr, &numArgs);
+	free(lpWideCharStr);
+	if (args == NULL)
+		return NULL;
+
+	int storage = numArgs * sizeof(LPSTR);
+	for (int i = 0; i < numArgs; ++i)
+	{
+		BOOL lpUsedDefaultChar = FALSE;
+		retval = WideCharToMultiByte(CP_ACP, 0, args[i], -1, NULL, 0, NULL, &lpUsedDefaultChar);
+		if (!SUCCEEDED(retval))
+		{
+			LocalFree(args);
+			return NULL;
+		}
+
+		storage += retval;
+	}
+
+	LPSTR* result = (LPSTR*)LocalAlloc(LMEM_FIXED, storage);
+	if (result == NULL)
+	{
+		LocalFree(args);
+		return NULL;
+	}
+
+	int bufLen = storage - numArgs * sizeof(LPSTR);
+	LPSTR buffer = ((LPSTR)result) + numArgs * sizeof(LPSTR);
+	for (int i = 0; i < numArgs; ++i)
+	{
+		assert(bufLen > 0);
+		BOOL lpUsedDefaultChar = FALSE;
+		retval = WideCharToMultiByte(CP_ACP, 0, args[i], -1, buffer, bufLen, NULL, &lpUsedDefaultChar);
+		if (!SUCCEEDED(retval))
+		{
+			LocalFree(result);
+			LocalFree(args);
+			return NULL;
+		}
+
+		result[i] = buffer;
+		buffer += retval;
+		bufLen -= retval;
+	}
+
+	LocalFree(args);
+
+	*pNumArgs = numArgs;
+	return result;
+}
+
+
 int Run(LPTSTR cmdline = NULL, int nCmdShow = SW_SHOWDEFAULT)
 {
 
@@ -63,47 +138,8 @@ int Run(LPTSTR cmdline = NULL, int nCmdShow = SW_SHOWDEFAULT)
 
 
 
-
-	char cmdargs[16][256];
 	int argc = 1;
-	int j = 0;
-	bool inquote = false;
-	int len = lstrlen(cmdline);
-	for (int i = 0; i < len; i++)
-	{
-		char c = cmdline[i];
-		if (c == '\0') break;
-		if (c == '"') inquote = !inquote;
-		if (!inquote && c == ' ')
-		{
-			if (j > 255) j = 255;
-			if (argc < 16) cmdargs[argc][j] = '\0';
-			argc++;
-			j = 0;
-		}
-		else
-		{
-			if (argc < 16 && j < 255) cmdargs[argc][j] = c;
-			j++;
-		}
-	}
-	if (j > 255) j = 255;
-	if (argc < 16) cmdargs[argc][j] = '\0';
-	if (len > 0) argc++;
-
-	// FIXME!!
-	strncpy(cmdargs[0], "einweggerat.exe", 256);
-
-	char* cmdargptr[16];
-	for (int i = 0; i < 16; i++)
-		cmdargptr[i] = &cmdargs[i][0];
-
-
-
-
-
-	//
-	
+	char** cmdargptr = CommandLineToArgvA(GetCommandLineA(), &argc);
 
 	if (argc < 2)
 	{
@@ -163,23 +199,6 @@ int Run(LPTSTR cmdline = NULL, int nCmdShow = SW_SHOWDEFAULT)
 	dlgMain.start((TCHAR*)rom.c_str(), (TCHAR*)core.c_str(), percore);
 	int nRet = theLoop.Run(dlgMain);
 	_Module.RemoveMessageLoop();
-	if (GetConsoleWindow() == GetForegroundWindow()) {
-		INPUT ip;
-		// Set up a generic keyboard event.
-		ip.type = INPUT_KEYBOARD;
-		ip.ki.wScan = 0; // hardware scan code for key
-		ip.ki.time = 0;
-		ip.ki.dwExtraInfo = 0;
-
-		// Send the "Enter" key
-		ip.ki.wVk = 0x0D; // virtual-key code for the "Enter" key
-		ip.ki.dwFlags = 0; // 0 for key press
-		SendInput(1, &ip, sizeof(INPUT));
-
-		// Release the "Enter" key
-		ip.ki.dwFlags = KEYEVENTF_KEYUP; // KEYEVENTF_KEYUP for key release
-		SendInput(1, &ip, sizeof(INPUT));
-	}
 	ExitProcess(0);
 	return nRet;
 }
