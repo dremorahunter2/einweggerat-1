@@ -134,11 +134,6 @@ void AllocRenderTarget()
 	glGenTextures(1, &g_video.blit_tex);
 	glBindTexture(GL_TEXTURE_2D, g_video.blit_fbo);
 	glGenFramebuffers(1, &g_video.blit_fbo);
-	glBindFramebuffer(GL_FRAMEBUFFER, g_video.blit_fbo);
-	glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, g_video.blit_tex, 0);
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
-
 	RECT wndsize;
 	GetClientRect(g_video.D3D_hwnd , &wndsize);
 	HANDLE share_handle = NULL;
@@ -150,6 +145,9 @@ void AllocRenderTarget()
 		GL_TEXTURE_2D, WGL_ACCESS_WRITE_DISCARD_NV);
 
 	wglDXLockObjectsNV(g_video.D3D_sharehandle, 1, &g_video.GL_htexture);
+	glBindFramebuffer(GL_FRAMEBUFFER, g_video.blit_fbo);
+	glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, g_video.blit_tex, 0);
+	GLenum check = glCheckFramebufferStatus(GL_FRAMEBUFFER);
 }
 
 /*private*/ void DeallocRenderTarget()
