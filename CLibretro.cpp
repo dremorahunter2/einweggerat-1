@@ -684,13 +684,8 @@ static size_t core_audio_sample_batch(const int16_t *data, size_t frames) {
 	return frames;
 }
 
-bool core_load(TCHAR *sofile) {
-	void(*set_environment)(retro_environment_t) = NULL;
-	void(*set_video_refresh)(retro_video_refresh_t) = NULL;
-	void(*set_input_poll)(retro_input_poll_t) = NULL;
-	void(*set_input_state)(retro_input_state_t) = NULL;
-	void(*set_audio_sample)(retro_audio_sample_t) = NULL;
-	void(*set_audio_sample_batch)(retro_audio_sample_batch_t) = NULL;
+bool CLibretro::core_load(TCHAR *sofile,bool gamespecificoptions, TCHAR* filename,TCHAR* core_filename) {
+	
 	memset(&g_retro, 0, sizeof(g_retro));
 	g_retro.handle = LoadLibrary(sofile);
 	if (!g_retro.handle)return false;
@@ -713,22 +708,60 @@ bool core_load(TCHAR *sofile) {
 	load_retro_sym(retro_serialize);
 	load_retro_sym(retro_unserialize);
 	load_retro_sym(retro_serialize_size);
-
-
+	void(*set_environment)(retro_environment_t) = NULL;
+	void(*set_video_refresh)(retro_video_refresh_t) = NULL;
+	void(*set_input_poll)(retro_input_poll_t) = NULL;
+	void(*set_input_state)(retro_input_state_t) = NULL;
+	void(*set_audio_sample)(retro_audio_sample_t) = NULL;
+	void(*set_audio_sample_batch)(retro_audio_sample_batch_t) = NULL;
+#define load_sym(V,name) if (!(*(void**)(&V)=(void*)libload(#name)))
 	load_sym(set_environment, retro_set_environment);
 	load_sym(set_video_refresh, retro_set_video_refresh);
 	load_sym(set_input_poll, retro_set_input_poll);
 	load_sym(set_input_state, retro_set_input_state);
 	load_sym(set_audio_sample, retro_set_audio_sample);
 	load_sym(set_audio_sample_batch, retro_set_audio_sample_batch);
+
+
+	TCHAR core_filename2[MAX_PATH] = { 0 };
+	GetModuleFileNameW(g_retro.handle, core_filename2, sizeof(core_filename2));
+
+
+	if (gamespecificoptions)
+	{
+		TCHAR filez[MAX_PATH] = { 0 };
+		lstrcpy(filez, filename);
+		memset(inputcfg_path, 0, MAX_PATH);
+		memset(corevar_path, 0, MAX_PATH);
+		PathRemoveExtension(core_filename2);
+		PathStripPath(filez);
+		PathRemoveExtension(filez);
+		lstrcpy(inputcfg_path, core_filename);
+		lstrcpy(corevar_path, core_filename);
+		lstrcat(inputcfg_path, filez);
+		lstrcat(corevar_path, filez);
+		lstrcat(inputcfg_path, L"_input.cfg");
+		lstrcat(corevar_path, L".ini");
+
+	}
+	else
+	{
+		memset(inputcfg_path, 0, MAX_PATH);
+		memset(corevar_path, 0, MAX_PATH);
+		PathRemoveExtension(core_filename2);
+		lstrcat(inputcfg_path, core_filename2);
+		lstrcat(corevar_path, core_filename2);
+		lstrcat(inputcfg_path, L"_input.cfg");
+		lstrcat(corevar_path, L".ini");
+	}
+
 	//set libretro func pointers
 	set_environment(core_environment);
 	set_video_refresh(core_video_refresh);
 	set_input_poll(core_input_poll);
 	set_input_state(core_input_state);
-	set_audio_sample(core_audio_sample);
-	set_audio_sample_batch(core_audio_sample_batch);
-
+	set_audio_sample(::core_audio_sample);
+	set_audio_sample_batch(::core_audio_sample_batch);
 	g_retro.retro_init();
 	g_retro.initialized = true;
 	return true;
@@ -787,43 +820,17 @@ bool CLibretro::loadfile(TCHAR* filename, TCHAR* core_filename,bool gamespecific
 	variables_changed = false;
 
 
-	if (gamespecificoptions)
-	{
-		TCHAR filez[MAX_PATH] = { 0 };
-		lstrcpy(filez, filename);
-		memset(inputcfg_path, 0, MAX_PATH);
-		memset(corevar_path, 0, MAX_PATH);
-		TCHAR core_filename[MAX_PATH] = { 0 };
-		GetCurrentDirectory(MAX_PATH, core_filename);
-		PathAppend(core_filename, L"cores\\");
-		PathStripPath(filez);
-		PathRemoveExtension(filez);
-		lstrcpy(inputcfg_path, core_filename);
-		lstrcpy(corevar_path, core_filename);
-		lstrcat(inputcfg_path,filez);
-		lstrcat(corevar_path, filez);
-		lstrcat(inputcfg_path, L"_input.cfg");
-		lstrcat(corevar_path, L".ini");
-
-	}
-	else
-	{
-		TCHAR core_filename2[MAX_PATH] = { 0 };
-		memset(inputcfg_path, 0, MAX_PATH);
-		memset(corevar_path, 0, MAX_PATH);
-		PathAppend(core_filename2, L"cores\\");
-		lstrcat(core_filename2,core_filename);
-		PathRemoveExtension(core_filename2);
-		lstrcat(inputcfg_path, core_filename2);
-		lstrcat(corevar_path, core_filename2);
-		lstrcat(inputcfg_path, L"_input.cfg");
-		lstrcat(corevar_path, L".ini");
-	}
-	if (!core_load(core_filename))
+	
+	if (!core_load(core_filename,gamespecificoptions,filename,core_filename))
 	{
 		printf("FAILED TO LOAD CORE!!!!!!!!!!!!!!!!!!");
 		return false;
 	}
+
+	
+
+
+
 
 	
 	

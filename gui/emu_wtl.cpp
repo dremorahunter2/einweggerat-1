@@ -111,9 +111,6 @@ LPSTR* CommandLineToArgvA(LPSTR lpCmdLine, INT *pNumArgs)
 
 int Run(LPTSTR cmdline = NULL, int nCmdShow = SW_SHOWDEFAULT)
 {
-
-
-
 	CEmuMessageLoop theLoop;
 	_Module.AddMessageLoop(&theLoop);
 	CMyWindow dlgMain;
@@ -157,6 +154,7 @@ int Run(LPTSTR cmdline = NULL, int nCmdShow = SW_SHOWDEFAULT)
 			int nRet = theLoop.Run(dlgMain);
 			dlgMain.DestroyWindow();
 			_Module.RemoveMessageLoop();
+			LocalFree(cmdargptr);
 			ExitProcess(0);
 			return nRet;
 		}
@@ -171,6 +169,7 @@ int Run(LPTSTR cmdline = NULL, int nCmdShow = SW_SHOWDEFAULT)
 			printf("Press any key to continue....\n");
 			dlgMain.DestroyWindow();
 			_Module.RemoveMessageLoop();
+			LocalFree(cmdargptr);
 			ExitProcess(0);
 			return 0;
 		}
@@ -192,13 +191,15 @@ int Run(LPTSTR cmdline = NULL, int nCmdShow = SW_SHOWDEFAULT)
 	a.add<string>("rom_name", 'r', "rom filename", true, "");
 	a.add("pergame", 'g', "per-game configuration");
 	a.parse_check(argc, cmdargptr);
-	dlgMain.ShowWindow(nCmdShow);
+
 	wstring rom = s2ws(a.get<string>("rom_name"));
 	wstring core = s2ws(a.get<string>("core_name"));
 	bool percore = a.exist("pergame");
+	dlgMain.ShowWindow(nCmdShow);
 	dlgMain.start((TCHAR*)rom.c_str(), (TCHAR*)core.c_str(), percore);
 	int nRet = theLoop.Run(dlgMain);
 	_Module.RemoveMessageLoop();
+	LocalFree(cmdargptr);
 	ExitProcess(0);
 	return nRet;
 }

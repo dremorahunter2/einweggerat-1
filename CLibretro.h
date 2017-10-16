@@ -111,6 +111,7 @@ public:
 	void render();
 	void run();
 	void reset();
+	bool core_load(TCHAR *sofile,bool specifics, TCHAR* filename, TCHAR* core_filename);
 	bool init(HWND hwnd);
 	bool savestate(TCHAR* filename, bool save = false);
 	void kill();
