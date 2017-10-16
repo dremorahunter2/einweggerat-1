@@ -14,6 +14,7 @@
 #include "../ini.h"
 #include "../libretro.h"
 #include <shlwapi.h>
+#include "../cmdline.h"
 #pragma comment(lib, "shlwapi.lib")
 using namespace std;
 using namespace utf8util;
@@ -794,54 +795,29 @@ public:
 			emulator = CLibretro::CreateInstance(m_hWnd ) ;
 			m_haccelerator = AtlLoadAccelerators(IDR_ACCELERATOR1);
 			pLoop->AddMessageFilter(this);
-			AllocConsole();
-			AttachConsole(GetCurrentProcessId());
-			freopen("CON", "w", stdout);
-
 			RegisterDropTarget();
 			SetRedraw(FALSE);
 			TIMECAPS tc; timeGetDevCaps(&tc, sizeof(TIMECAPS)); 
 			UINT gwTimerRes = min(max(tc.wPeriodMin, 1), tc.wPeriodMax); 
 			timeBeginPeriod(gwTimerRes);
+			return 0;
+		}
 
-			LPWSTR *szArgList;
-			int argCount;
-			TCHAR rom_filename[MAX_PATH] = { 0 };
-			TCHAR core_filename[MAX_PATH] = { 0 };
-			bool specifics = false;
-			szArgList = CommandLineToArgvW(GetCommandLine(), &argCount);
+
+		void start(TCHAR* rom_filename,TCHAR* core_filename, bool specifics)
+		{
 			TCHAR core_filename2[MAX_PATH] = { 0 };
 			GetCurrentDirectory(MAX_PATH, core_filename2);
 			PathAppend(core_filename2, L"cores");
-			bool set=SetDllDirectory(core_filename2);
-			while( (argCount> 1) && (szArgList[1][0] == '-'))
+			bool set = SetDllDirectory(core_filename2);
+			if (lstrcmp(core_filename, L"") == 0 || lstrcmp(rom_filename, L"") == 0)
 			{
-				switch (szArgList[1][1])
-				{
-				case 'r':
-					lstrcpy(rom_filename, &szArgList[1][2]);
-					break;
-				case 'c':
-					lstrcpy(core_filename, &szArgList[1][2]);
-					break;
-				case 'q':
-					specifics = true;
-					++szArgList;
-					--argCount;
-						break;
-				default:
-					bad:
-					CAboutDlg dlg;
-					dlg.DoModal();
-					DestroyWindow();
-					return 0;
-				}
-				++szArgList;
-				--argCount;
+				CAboutDlg dlg;
+				dlg.DoModal();
+				DestroyWindow();
+				return;
 			}
-			if (lstrcmp(core_filename,L"") == 0 || lstrcmp(rom_filename, L"") == 0)goto bad;
-			emulator->loadfile(rom_filename, core_filename,specifics);
-			return 0;
+			emulator->loadfile(rom_filename, core_filename, specifics);
 		}
 
 		void ProcessFile(LPCTSTR lpszPath)

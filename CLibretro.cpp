@@ -82,9 +82,9 @@ long long microseconds_now() {
 void Audio::drc()
 {
 	static uint64_t fps_time = 0;
-	uint64_t now = ::milliseconds_now();
+	uint64_t now = ::microseconds_now();
 	{
-		fps = (1000.0) / (now - fps_time);
+		fps = (1000000.0) / (now - fps_time);
 		fps_time = now;
 	}
 	if (listDeltaMA.size() == drc_capac)
@@ -445,7 +445,7 @@ bool core_environment(unsigned cmd, void *data) {
 			TCHAR sys_filename[MAX_PATH] = { 0 };
 			GetCurrentDirectory(MAX_PATH, sys_filename);
 			PathAppend(sys_filename, L"system");
-			string ansi = ansi_from_utf16(sys_filename);
+			string ansi = utf8_from_utf16(sys_filename);
 			sys_path = strdup(ansi.c_str());
 		}
 		char **ppDir = (char**)data;
@@ -820,12 +820,16 @@ bool CLibretro::loadfile(TCHAR* filename, TCHAR* core_filename,bool gamespecific
 		lstrcat(inputcfg_path, L"_input.cfg");
 		lstrcat(corevar_path, L".ini");
 	}
-	if (!core_load(core_filename))return false;
+	if (!core_load(core_filename))
+	{
+		printf("FAILED TO LOAD CORE!!!!!!!!!!!!!!!!!!");
+		return false;
+	}
 
 	
 	
 	CHAR szFileName[MAX_PATH] = { 0 };
-	string ansi = ansi_from_utf16(filename);
+	string ansi = utf8_from_utf16(filename);
 	strcpy(szFileName, ansi.c_str());
 	struct retro_game_info info = {0};
 	struct stat st;
@@ -838,7 +842,12 @@ bool CLibretro::loadfile(TCHAR* filename, TCHAR* core_filename,bool gamespecific
 	g_retro.retro_get_system_info(&system);
 	if (!system.need_fullpath) {
 		FILE *Input = _wfopen(filename, L"rb");
-		if (!Input) return(NULL);
+		if (!Input)
+		{
+			printf("FAILED TO LOAD ROMz!!!!!!!!!!!!!!!!!!");
+			return false;
+		}
+		
 		// Get the filesize
 		fseek(Input, 0, SEEK_END);
 		int Size = ftell(Input);
@@ -852,9 +861,12 @@ bool CLibretro::loadfile(TCHAR* filename, TCHAR* core_filename,bool gamespecific
 		memcpy((BYTE*)info.data, Memory, info.size);
 		free(Memory);
 	}
-	if (!g_retro.retro_load_game(&info)) return false;
-	if (info.data)
-	free((void*)info.data);
+	if (!g_retro.retro_load_game(&info))
+	{
+		printf("FAILED TO LOAD ROM!!!!!!!!!!!!!!!!!!");
+		return false;
+	}
+	if (info.data)free((void*)info.data);
 	thread_handle = CreateThread(NULL, 0, libretro_thread, (void*) this, 0, &thread_id);
 	
 	return true;
