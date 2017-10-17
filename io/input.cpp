@@ -125,12 +125,12 @@ input::~input()
 
 	void input::poll()
 	{
-		if(bl != nullptr)bl->process( di->read() );
+		if(bl)bl->process( di->read() );
 	}
 
 	bool input::getbutton(int which, int16_t & value, int & retro_id, bool & isanalog)
 	{
-			return bl->getbutton(which, value, retro_id, isanalog);
+		return bl->getbutton(which, value,retro_id,isanalog);
 	}
 
 	unsigned input::read()

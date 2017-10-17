@@ -151,7 +151,7 @@ bool Audio::init(double ratio)
 		return false;
 	}
 	config = mal_device_config_init_playback(mal_format_s16, 2, _sampleRate, ::sdl_audio_callback);
-	//config.bufferSizeInFrames = 1024;
+	config.bufferSizeInFrames = 1024;
 	_fifo = fifo_new(SAMPLE_COUNT);
 	if (mal_device_init(&context, mal_device_type_playback, NULL, &config, this, &device) != MAL_SUCCESS) {
 		mal_context_uninit(&context);
@@ -565,40 +565,56 @@ static void core_video_refresh(const void *data, unsigned width, unsigned height
 
 static void core_input_poll(void) {
 	input *input_device = input::GetSingleton();
-	if(input_device->bl != NULL)
-		input_device->poll();
-	
+	input_device->poll();
 }
 
 static int16_t core_input_state(unsigned port, unsigned device, unsigned index, unsigned id) {
 	if (port != 0)return 0;
 	input *input_device = input::GetSingleton();
-	if (input_device->bl != NULL)
+	if (input_device && input_device->bl != NULL)
 	{
-		input_device->poll();
+
 		for (unsigned int i = 0; i < input_device->bl->get_count(); i++) {
 			{
 				if (device == RETRO_DEVICE_ANALOG)
 				{
-					int retro_id = 0;
+					if (index == RETRO_DEVICE_INDEX_ANALOG_LEFT)
+					{
+						int retro_id = 0;
+						int16_t value = 0;
+						bool isanalog = false;
+						input_device->getbutton(i, value, retro_id,isanalog);
+						if (value <= -0x8000)value = -0x7fff;
+						if (value >= 0x8000)value = 0x7fff;
+						if (id == RETRO_DEVICE_ID_ANALOG_X && retro_id == 16)
+						{
+							return isanalog ? -value : value;
+						}
+						if (id == RETRO_DEVICE_ID_ANALOG_Y && retro_id == 17)
+						{
+							return isanalog ? -value : value;
+						}
+					}
+					if (index == RETRO_DEVICE_INDEX_ANALOG_RIGHT)
+					{
+						int retro_id = 0;
+						int16_t value = 0;
+						bool isanalog = false;
+						input_device->getbutton(i, value, retro_id, isanalog);
+						if (value <= -0x8000)value = -0x7fff;
+						if (value >= 0x8000)value = 0x7fff;
+						if (id == RETRO_DEVICE_ID_ANALOG_X && retro_id == 18 || id == RETRO_DEVICE_ID_ANALOG_Y && retro_id == 19)
+						{
+							return isanalog ? -value : value;
+						}
+					}
+				}
+				else if (device == RETRO_DEVICE_JOYPAD)
+				{
+					int retro_id;
 					int16_t value = 0;
 					bool isanalog = false;
 					input_device->getbutton(i, value, retro_id, isanalog);
-					if (value <= -0x7fff)value = -0x7fff;
-					if (value >= 0x7fff)value = 0x7fff;
-					if (id == RETRO_DEVICE_ID_ANALOG_X && retro_id == 16 || id == RETRO_DEVICE_ID_ANALOG_X && retro_id == 18)return value;
-					if (id == RETRO_DEVICE_ID_ANALOG_Y && retro_id == 17 || id == RETRO_DEVICE_ID_ANALOG_Y && retro_id == 19)
-					{
-						int16_t var = isanalog ? -value : value;
-						return var;
-					}
-				}
-				else if(device == RETRO_DEVICE_JOYPAD)
-				{
-					int retro_id = 0;
-					int16_t value = 0;
-					bool isanalog=false;
-					input_device->getbutton(i, value, retro_id,isanalog);
 					value = abs(value);
 					if (retro_id == id)return value;
 				}

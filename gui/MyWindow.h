@@ -667,10 +667,12 @@ public:
 		greetz += "Higor Eurípedes\r\n";
 		greetz += "Andre Leiradella\r\n";
 		greetz += "Daniel De Matteis\r\n";
-		greetz += "Andrés Suarez\r\n";
+		greetz += "Andrés Suárez\r\n";
 		greetz += "Brad Parker\r\n";
 		greetz += "Chris Snowhill\r\n";
 		greetz += "Hunter Kaller\r\n";
+		greetz += "Alfred Agrell\r\n";
+		
 		greets.SetWindowText(greetz);
 		website.SubclassWindow(GetDlgItem(IDC_LINK));
 		website.SetHyperLink(_T("http://mudlord.info"));

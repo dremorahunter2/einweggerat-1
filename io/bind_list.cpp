@@ -5,7 +5,7 @@
 #include <assert.h>
 
 #include <windows.h>
-#include <cmath>
+
 #include "abstract_file.h"
 
 
@@ -54,10 +54,9 @@ class bind_list_i : public bind_list
 	{
 		assert(which < list.size());
 		list[which].status = false;
-		if(list[which].retro_id < 16)
+		if (list[which].retro_id < 16)
 		list[which].value = 0;
 		else list[which].value = value;
-		
 	}
 
 public:
@@ -67,7 +66,9 @@ public:
 		const bind & b = list[which];
 		value = b.value;
 		retro_id = b.retro_id;
-		isanalog = b.isxinput_y;
+		isanalog = false;
+		if (b.e.xinput.type == dinput::di_event::xinput_axis && b.e.xinput.which==1)
+		isanalog = true;
 		return b.status;
 	}
 
@@ -108,22 +109,14 @@ public:
 				if ( guids->get_guid( e.joy.serial, guid ) )
 					guids->add( guid );
 			}
+
 			bind b = { 0 };
 			b.e = e;
 			b.action = action;
 			b.status = false;
 			b.value = 0;
-			
 			b.retro_id = retro_id;
 			lstrcpy(b.description, description);
-			b.isxinput_y = false;
-			if (e.type == dinput::di_event::ev_xinput)
-			{
-				if (e.xinput.which & 1 && e.xinput.type == dinput::di_event::xinput_axis)
-				{
-					b.isxinput_y = true;
-				}
-			}
 			list.push_back( b );
 
 
@@ -214,14 +207,6 @@ public:
 				b.e = e;
 				b.action = action;
 				b.retro_id = retro_id;
-				b.isxinput_y = false;
-				if (e.type == dinput::di_event::ev_xinput)
-				{
-					if (e.xinput.which & 1 && e.xinput.type == dinput::di_event::xinput_axis)
-					{
-						b.isxinput_y = true;
-					}
-				}
 				lstrcpy(b.description, description);
 			}
 			else
@@ -229,7 +214,6 @@ public:
 				b.e = list2.at(i).e;
 				b.action = list2.at(i).action;
 				b.retro_id = list2.at(i).retro_id;
-				b.isxinput_y = list2.at(i).isxinput_y;
 				lstrcpy(b.description, list2.at(i).description);
 			}
 			if (guids->get_guid(b.e.joy.serial, guid))
@@ -262,7 +246,6 @@ public:
 					err = in.read( & b.e.type, sizeof( b.e.type ) ); if ( err ) break;
 					err = in.read( &b.description, sizeof(b.description)); if (err) break;
 					err = in.read( &b.retro_id, sizeof(b.retro_id)); if (err) break;
-					err = in.read(&b.isxinput_y, sizeof(b.isxinput_y)); if (err) break;
 
 					if ( b.e.type == dinput::di_event::ev_none )
 					{
@@ -306,7 +289,6 @@ public:
 						{
 							err = in.read( & b.e.xinput.axis, sizeof( b.e.xinput.axis ) ); if ( err ) break;
 						}
-
 						list.push_back( b );
 					}
 				}
@@ -338,7 +320,6 @@ public:
 					err = out.write( & it->e.type, sizeof( it->e.type ) ); if ( err ) break;
 					err = out.write(&it->description, sizeof(it->description)); if (err) break;
 					err = out.write(&it->retro_id, sizeof(it->retro_id)); if (err) break;
-					err = out.write(&it->isxinput_y, sizeof(it->isxinput_y)); if (err) break;
 
 
 					if (it->e.type == dinput::di_event::ev_none)
@@ -444,7 +425,7 @@ public:
 								itb->e.joy.type == dinput::di_event::joy_axis &&
 								itb->e.joy.which == it->joy.which )
 							{
-								if ( it->joy.axis != itb->e.joy.axis && it->joy.axis) release( itb->action, it->joy.value );
+								if ( it->joy.axis != itb->e.joy.axis && it->joy.axis != dinput::di_event::axis_center) release( itb->action, ( it->joy.axis == dinput::di_event::axis_negative ) ? ( ( it->joy.value ) ) : ( ( it->joy.value - 0 ) ) );
 							}
 						}
 						for ( itb = list.begin(); itb < list.end(); ++itb )
@@ -454,7 +435,7 @@ public:
 								itb->e.joy.type == dinput::di_event::joy_axis &&
 								itb->e.joy.which == it->joy.which )
 							{
-								if ( it->joy.axis == itb->e.joy.axis && it->joy.axis) press(itb->action, it->joy.value);
+								if ( it->joy.axis == itb->e.joy.axis && it->joy.axis != dinput::di_event::axis_center) press( itb->action, ( it->joy.axis == dinput::di_event::axis_negative ) ? ( (it->joy.value )) : ( ( it->joy.value - 0 ) ) );
 							}
 						}
 					}
@@ -494,29 +475,17 @@ public:
 								itb->e.xinput.type == dinput::di_event::xinput_axis &&
 								itb->e.xinput.which == it->xinput.which )
 							{
-								{
-									if (it->xinput.axis != itb->e.xinput.axis)
-									{
-										 release(itb->action, it->joy.value);
-									}
-								}
-
-								
+								if (it->xinput.axis != itb->e.xinput.axis)release(itb->action, it->joy.value);
 							}
 						}
 						for ( itb = list.begin(); itb < list.end(); ++itb )
 						{
-							if (itb->e.type == dinput::di_event::ev_xinput &&
+							if ( itb->e.type == dinput::di_event::ev_xinput &&
 								itb->e.xinput.index == it->xinput.index &&
 								itb->e.xinput.type == dinput::di_event::xinput_axis &&
-								itb->e.xinput.which == it->xinput.which)
+								itb->e.xinput.which == it->xinput.which )
 							{
-								if (it->xinput.axis == itb->e.xinput.axis)
-								{
-							
-									press(itb->action, it->joy.value);
-								}
-
+								if (it->xinput.axis == itb->e.xinput.axis) press(itb->action, it->joy.value);
 							}
 						}
 					}

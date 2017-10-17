@@ -30,7 +30,6 @@ public:
 		int16_t         value;
 		TCHAR description[64];
 		unsigned retro_id;
-		unsigned retro_analog_id;
 		bool isxinput_y;
 	};
 
