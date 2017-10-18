@@ -47,11 +47,16 @@ static mal_uint32 sdl_audio_callback(mal_device* pDevice, mal_uint32 frameCount,
 mal_uint32 Audio::fill_buffer(uint8_t* out, mal_uint32 count) {
 	std::lock_guard<std::mutex> lg(mutex);	
 	size_t avail = fifo_read_avail(_fifo);
-	size_t write_size =count > avail ? avail : count;
-	buffer_full.notify_all();
-	fifo_read(_fifo, out,write_size);
-	memset(out + write_size, 0, count - write_size);
-	return count;
+	if (avail)
+	{
+		size_t write_size = count > avail ? avail : count;
+		buffer_full.notify_all();
+		fifo_read(_fifo, out, write_size);
+		memset(out + write_size, 0, count - write_size);
+		return count;
+	}
+	return 0;
+	
 }
 
 long long milliseconds_now() {
@@ -586,16 +591,12 @@ static int16_t core_input_state(unsigned port, unsigned device, unsigned index, 
 						input_device->getbutton(i, value, retro_id,isanalog);
 						if (value <= -0x8000)value = -0x7fff;
 						if (value >= 0x8000)value = 0x7fff;
-						if (id == RETRO_DEVICE_ID_ANALOG_X && retro_id == 16)
-						{
-							return isanalog ? -value : value;
-						}
-						if (id == RETRO_DEVICE_ID_ANALOG_Y && retro_id == 17)
+						if ((id == RETRO_DEVICE_ID_ANALOG_X && retro_id == 16) || (id == RETRO_DEVICE_ID_ANALOG_Y && retro_id == 17))
 						{
 							return isanalog ? -value : value;
 						}
 					}
-					if (index == RETRO_DEVICE_INDEX_ANALOG_RIGHT)
+					else if (index == RETRO_DEVICE_INDEX_ANALOG_RIGHT)
 					{
 						int retro_id = 0;
 						int16_t value = 0;
@@ -603,7 +604,7 @@ static int16_t core_input_state(unsigned port, unsigned device, unsigned index, 
 						input_device->getbutton(i, value, retro_id, isanalog);
 						if (value <= -0x8000)value = -0x7fff;
 						if (value >= 0x8000)value = 0x7fff;
-						if (id == RETRO_DEVICE_ID_ANALOG_X && retro_id == 18 || id == RETRO_DEVICE_ID_ANALOG_Y && retro_id == 19)
+						if ((id == RETRO_DEVICE_ID_ANALOG_X && retro_id == 18) || (id == RETRO_DEVICE_ID_ANALOG_Y && retro_id == 19))
 						{
 							return isanalog ? -value : value;
 						}

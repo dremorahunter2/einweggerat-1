@@ -67,8 +67,11 @@ public:
 		value = b.value;
 		retro_id = b.retro_id;
 		isanalog = false;
-		if (b.e.xinput.type == dinput::di_event::xinput_axis && b.e.xinput.which==1)
-		isanalog = true;
+		if (b.e.joy.type == dinput::di_event::ev_xinput && 
+		b.e.xinput.type == dinput::di_event::xinput_axis && b.e.xinput.which == 1)
+		{
+			isanalog = true;
+		}
 		return b.status;
 	}
 
