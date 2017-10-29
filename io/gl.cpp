@@ -439,11 +439,6 @@ void create_window(int width, int height, HWND hwnd) {
 
 	g_video.last_w = 0;
 	g_video.last_h = 0;
-
-
-	
-
-	if (g_video.hw.context_reset)g_video.hw.context_reset();
 	g_win = true;
 }
 
@@ -541,7 +536,7 @@ void video_configure(const struct retro_game_geometry *geom, HWND hwnd) {
 
 	refresh_vertex_data();
 
-	if (g_video.hw.context_reset)g_video.hw.context_reset();
+	if (g_video.hw.context_reset && g_video.hw.context_type != RETRO_HW_CONTEXT_NONE)g_video.hw.context_reset();
 }
 
 
@@ -614,7 +609,7 @@ void video_refresh(const void *data, unsigned width, unsigned height, unsigned p
 
 	wglDXUnlockObjectsNV(g_video.D3D_sharehandle, 1, &g_video.GL_htexture);
 	g_video.D3D_device->StretchRect(g_video.D3D_GLtarget,NULL, g_video.D3D_backbuf, NULL, D3DTEXF_NONE);
-	while (D3DERR_WASSTILLDRAWING == g_video.D3D_device->PresentEx(NULL, NULL, NULL, NULL,D3DPRESENT_FORCEIMMEDIATE)) Sleep(1) ;
+	g_video.D3D_device->PresentEx(NULL, NULL, NULL, NULL,D3DPRESENT_FORCEIMMEDIATE);
 	wglDXLockObjectsNV(g_video.D3D_sharehandle, 1, &g_video.GL_htexture);
 }
 

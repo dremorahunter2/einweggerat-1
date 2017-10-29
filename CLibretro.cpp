@@ -45,17 +45,13 @@ static mal_uint32 sdl_audio_callback(mal_device* pDevice, mal_uint32 frameCount,
 }
 
 mal_uint32 Audio::fill_buffer(uint8_t* out, mal_uint32 count) {
-	std::lock_guard<std::mutex> lg(mutex);	
+	//std::lock_guard<std::mutex> lg(mutex);	
 	size_t avail = fifo_read_avail(_fifo);
-	if (avail)
-	{
 		size_t write_size = count > avail ? avail : count;
-		buffer_full.notify_all();
+	//	buffer_full.notify_all();
 		fifo_read(_fifo, out, write_size);
 		memset(out + write_size, 0, count - write_size);
 		return count;
-	}
-	return 0;
 	
 }
 
@@ -118,7 +114,7 @@ void Audio::drc()
 		//	avg = system_fps;
 		if ((avg < system_fps) && underrun) {
 			double sampleRate = system_rate *adjust;
-			setRate(sampleRate);
+		//	setRate(sampleRate);
 		}
 	}
 	listDeltaMA.push_back(fps);	
@@ -231,10 +227,11 @@ void Audio::mix(const int16_t* samples, size_t frames)
 	}
 
 	int size = out_len * 2;
-	std::unique_lock<std::mutex> l(lock);
-	buffer_full.wait(l, [this, size]() {return fifo_write_avail(_fifo) > size; });
-
+	//std::unique_lock<std::mutex> l(lock);
+	//buffer_full.wait(l, [this, size]() {return fifo_write_avail(_fifo) > size; });
+	while (size > fifo_write_avail(_fifo))Sleep(1);
 	fifo_write(_fifo, output, size);
+
 
 
 	retro_time_t to_sleep_ms = (
@@ -951,12 +948,6 @@ void CLibretro::run()
 			}
 		}
 		_audio->mix(_samples, _samplesCount/2);
-
-
-
-		
-
-	
 
 			// Measure speed
 			double currentTime = milliseconds_now()/1000;
