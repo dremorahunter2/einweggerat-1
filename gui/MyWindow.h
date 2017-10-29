@@ -766,7 +766,7 @@ public:
 
 		void DoFrame()
 		{
-			//if (emulator->running())emulator->run();
+			if (emulator->running())emulator->run();
 		}
 
 		LRESULT OnSize(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& bHandled)

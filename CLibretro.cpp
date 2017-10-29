@@ -824,6 +824,8 @@ CLibretro::~CLibretro(void)
 
 #include <sys/stat.h>
 
+#include <dwmapi.h>
+#pragma comment (lib,"dwmapi.lib")
 bool CLibretro::loadfile(TCHAR* filename, TCHAR* core_filename,bool gamespecificoptions)
 {
 	if (isEmulating)isEmulating = false;
@@ -890,46 +892,34 @@ bool CLibretro::loadfile(TCHAR* filename, TCHAR* core_filename,bool gamespecific
 		return false;
 	}
 	if (info.data)free((void*)info.data);
-	thread_handle = CreateThread(NULL, 0, libretro_thread, (void*) this, 0, &thread_id);
-	
-	return true;
-}
 
-#include <dwmapi.h>
-#pragma comment (lib,"dwmapi.lib")
-
-DWORD WINAPI CLibretro::libretro_thread(void* Param)
-{
-	CLibretro* This = (CLibretro*)Param;
-	
 	retro_system_av_info av = { 0 };
 	g_retro.retro_get_system_av_info(&av);
 
-	::video_configure(&av.geometry, This->emulator_hwnd);
+	::video_configure(&av.geometry, emulator_hwnd);
 
-	This->_samples = (int16_t*)malloc(SAMPLE_COUNT);
-	memset(This->_samples, 0, SAMPLE_COUNT);
+	_samples = (int16_t*)malloc(SAMPLE_COUNT);
+	memset(_samples, 0, SAMPLE_COUNT);
 
 	DWM_TIMING_INFO timing_info;
 	timing_info.cbSize = sizeof(timing_info);
 	DwmGetCompositionTimingInfo(NULL, &timing_info);
-	double refreshr = timing_info.rateRefresh.uiNumerator/ 1000;
+	double refreshr = timing_info.rateRefresh.uiNumerator / 1000;
 	double time_skew = fabs(1.0f - av.timing.fps / refreshr);
 	double orig_ratio = (double)refreshr / av.timing.fps;
-	This->_audio = new Audio(orig_ratio,refreshr,time_skew);
-	
-	This->listDeltaMA.clear();
-	This->frame_count = 0;
-	This->paused = false;
-	This->isEmulating = true;
-	This->run();
-	g_retro.retro_unload_game();
-	g_retro.retro_deinit();
-	delete []This->_audio;
-	video_deinit();
+	_audio = new Audio(orig_ratio, refreshr, time_skew);
 
-	return 0;
+	listDeltaMA.clear();
+	frame_count = 0;
+	paused = false;
+	isEmulating = true;
+
+	lastTime = milliseconds_now()/1000;
+    nbFrames = 0;
+
+	return true;
 }
+
 
 void CLibretro::splash()
 {
@@ -947,7 +937,7 @@ void CLibretro::splash()
 
 void CLibretro::run()
 {
-	while(isEmulating)
+	if(isEmulating)
 	{
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 		glClearColor(0, 0, 0, 1);
@@ -961,6 +951,24 @@ void CLibretro::run()
 			}
 		}
 		_audio->mix(_samples, _samplesCount/2);
+
+
+
+		
+
+	
+
+			// Measure speed
+			double currentTime = milliseconds_now()/1000;
+			nbFrames++;
+			if (currentTime - lastTime >= 0.5) { // If last prinf() was more than 1 sec ago
+												 // printf and reset timer
+				TCHAR buffer[100] = { 0 };
+				int len = swprintf(buffer, 100, L"einweggerat - 64bit: %2f ms/frame\n, %d FPS", 1000.0 / double(nbFrames),nbFrames);
+				SetWindowText(emulator_hwnd, buffer);
+				nbFrames = 0;
+				lastTime += 1.0;
+			}
 		
 	}
 	
@@ -975,6 +983,10 @@ bool CLibretro::init(HWND hwnd)
 void CLibretro::kill()
 {
 	isEmulating = false;
+	g_retro.retro_unload_game();
+	g_retro.retro_deinit();
+	delete[]_audio;
+	video_deinit();
 	//WindowsAudio::Close();
 }
 

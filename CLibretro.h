@@ -121,6 +121,9 @@ public:
 	int16_t*                        _samples;
 	size_t                          _samplesCount;
 	Audio * _audio;
+
+	double lastTime;
+    int nbFrames;
 };
 
 #ifdef __cplusplus
