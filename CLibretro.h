@@ -30,18 +30,7 @@ extern "C" {
 	{
 	
 	public:
-	Audio(double srate, double refreshra, double ts)
-	{
-		skew = ts;
-		drc_capac = 512;
-		refreshrate = refreshra;
-		init(srate);
-	}
-	~Audio()
-	{
-		destroy();
-	}
-	bool init(double sample_rate);
+	bool init(double srate, double refreshra, double ts);
 	void destroy();
 	void reset();
 	bool setRate(double rate);
@@ -50,7 +39,6 @@ extern "C" {
 	mal_uint32 fill_buffer(uint8_t* pSamples, mal_uint32 samplecount);
 	mal_context context;
 	mal_device device;
-	mal_device_config config;
 	unsigned _sampleRate;
 	unsigned _coreRate;
 	SpeexResamplerState* _resampler;
@@ -120,7 +108,7 @@ public:
 	size_t core_audio_sample_batch(const int16_t *data, size_t frames);
 	int16_t*                        _samples;
 	size_t                          _samplesCount;
-	Audio * _audio;
+	Audio  _audio;
 
 	double lastTime;
     int nbFrames;

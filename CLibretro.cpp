@@ -47,12 +47,10 @@ static mal_uint32 sdl_audio_callback(mal_device* pDevice, mal_uint32 frameCount,
 mal_uint32 Audio::fill_buffer(uint8_t* out, mal_uint32 count) {
 	//std::lock_guard<std::mutex> lg(mutex);	
 	size_t avail = fifo_read_avail(_fifo);
-		size_t write_size = count > avail ? avail : count;
-	//	buffer_full.notify_all();
-		fifo_read(_fifo, out, write_size);
-		memset(out + write_size, 0, count - write_size);
-		return count;
-	
+	size_t write_size = count > avail ? avail : count;
+	fifo_read(_fifo, out, write_size);
+	memset(out + write_size, 0, count - write_size);
+	return count;
 }
 
 long long milliseconds_now() {
@@ -95,11 +93,6 @@ void Audio::drc()
 		for (std::vector<double>::iterator p = listDeltaMA.begin(); p != listDeltaMA.end(); ++p)
 		sum += (double)*p;
 		float avg = sum / listDeltaMA.size();
-
-		//size_t n = listDeltaMA.size() / 2;
-		//std::nth_element(listDeltaMA.begin(), listDeltaMA.begin() + n, listDeltaMA.end());
-		//float avg = listDeltaMA[n];
-		
 		listDeltaMA.clear();
 	
 		int available = fifo_write_avail(_fifo);
@@ -125,8 +118,11 @@ static retro_time_t frame_limit_last_time = 0.0;
 
 static const int srate_tab[] = { 8000,11025,16000,22050,24000,32000,44100,48000};
 #define ARRAY_SIZE(x) ((sizeof x) / (sizeof *x))
-bool Audio::init(double ratio)
+bool Audio::init(double ratio, double refreshra, double ts)
 {
+	skew = ts;
+	drc_capac = 512;
+	refreshrate = refreshra;
 	retro_system_av_info av = { 0 };
 	g_retro.retro_get_system_av_info(&av);
 	system_rate = av.timing.sample_rate;
@@ -139,19 +135,12 @@ bool Audio::init(double ratio)
 	_coreRate = 0;
 	_resampler = NULL;
 	_sampleRate = 44100;
-	/*for (int i = 0; i < ARRAY_SIZE(srate_tab); i++)
-	{
-		if (srate_tab[i] == system_rate)
-		{
-			_sampleRate = system_rate;
-			srate = system_rate;
-		}*/
 	setRate(srate);
 	if (mal_context_init(NULL, 0, &context) != MAL_SUCCESS) {
 		printf("Failed to initialize context.");
 		return false;
 	}
-	config = mal_device_config_init_playback(mal_format_s16, 2, _sampleRate, ::sdl_audio_callback);
+	mal_device_config config = mal_device_config_init_playback(mal_format_s16, 2, _sampleRate, sdl_audio_callback);
 	config.bufferSizeInFrames = 1024;
 	_fifo = fifo_new(SAMPLE_COUNT);
 	if (mal_device_init(&context, mal_device_type_playback, NULL, &config, this, &device) != MAL_SUCCESS) {
@@ -842,13 +831,6 @@ bool CLibretro::loadfile(TCHAR* filename, TCHAR* core_filename,bool gamespecific
 		printf("FAILED TO LOAD CORE!!!!!!!!!!!!!!!!!!");
 		return false;
 	}
-
-	
-
-
-
-
-	
 	
 	CHAR szFileName[MAX_PATH] = { 0 };
 	string ansi = utf8_from_utf16(filename);
@@ -904,7 +886,7 @@ bool CLibretro::loadfile(TCHAR* filename, TCHAR* core_filename,bool gamespecific
 	double refreshr = timing_info.rateRefresh.uiNumerator / 1000;
 	double time_skew = fabs(1.0f - av.timing.fps / refreshr);
 	double orig_ratio = (double)refreshr / av.timing.fps;
-	_audio = new Audio(orig_ratio, refreshr, time_skew);
+	_audio.init(orig_ratio, refreshr, time_skew);
 
 	listDeltaMA.clear();
 	frame_count = 0;
@@ -942,12 +924,12 @@ void CLibretro::run()
 		_samplesCount = 0;
 		if (!paused)
 		{
-			while (!_samplesCount )
+			while(!_samplesCount)
 			{
 				g_retro.retro_run();
 			}
 		}
-		_audio->mix(_samples, _samplesCount/2);
+	    _audio.mix(_samples, _samplesCount/2);
 
 			// Measure speed
 			double currentTime = milliseconds_now()/1000;
@@ -974,10 +956,12 @@ bool CLibretro::init(HWND hwnd)
 void CLibretro::kill()
 {
 	isEmulating = false;
+	_audio.destroy();
+	video_deinit();
 	g_retro.retro_unload_game();
 	g_retro.retro_deinit();
-	delete[]_audio;
-	video_deinit();
+
+	
 	//WindowsAudio::Close();
 }
 
