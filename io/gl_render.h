@@ -19,7 +19,6 @@ typedef struct{
 	GLuint blit_fbo;
 
 	GLuint pitch;
-	GLint tex_w, tex_h;
 	GLuint clip_w, clip_h;
 
 	GLuint pixfmt;

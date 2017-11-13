@@ -285,18 +285,18 @@ void resize_cb(int w, int h) {
 	int32_t vp_x = 0;
 	int32_t vp_y = 0;
 
-	int32_t hw = g_video.tex_h * vp_width;
-	int32_t wh = g_video.tex_w * vp_height;
+	int32_t hw = g_video.clip_h * vp_width;
+	int32_t wh = g_video.clip_w * vp_height;
 
 	// add letterboxes or pillarboxes if the window has a different aspect ratio
 	// than the current display mode
 	if (hw > wh) {
-		int32_t w_max = wh / g_video.tex_h;
+		int32_t w_max = wh / g_video.clip_h;
 		vp_x += (vp_width - w_max) / 2;
 		vp_width = w_max;
 	}
 	else if (hw < wh) {
-		int32_t h_max = hw / g_video.tex_w;
+		int32_t h_max = hw / g_video.clip_w;
 		vp_y += (vp_height - h_max) / 2;
 		vp_height = h_max;
 	}
@@ -488,9 +488,6 @@ void video_configure(const struct retro_game_geometry *geom, HWND hwnd) {
 	g_video.D3D_device->GetBackBuffer(0, 0, D3DBACKBUFFER_TYPE_MONO, &g_video.D3D_backbuf);
 	AllocRenderTarget();
 	g_video.alloc_framebuf = true;
-
-	g_video.tex_w = geom->max_width;
-	g_video.tex_h = geom->max_height;
 	g_video.clip_w = 0;
 	g_video.clip_h =0;	
 }
