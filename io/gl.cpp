@@ -34,24 +34,24 @@ static struct {
 static float g_scale = 2;
 static bool g_win = false;
 
-static const char *g_vshader_src =
-"#version 330\n"
-"in vec2 i_pos;\n"
-"in vec2 i_coord;\n"
-"out vec2 o_coord;\n"
-"uniform mat4 u_mvp;\n"
-"void main() {\n"
-"o_coord = i_coord;\n"
-"gl_Position = vec4(i_pos, 0.0, 1.0) * u_mvp;\n"
-"}";
 
-static const char *g_fshader_src =
-"#version 330\n"
-"in vec2 o_coord;\n"
-"uniform sampler2D u_tex;\n"
-"void main() {\n"
-"gl_FragColor = texture2D(u_tex, o_coord);\n"
-"}";
+const GLchar* vert_shader =
+"#version 330 core\n"
+"out vec2 uv;\n"
+"uniform mat4 u_mvp;\n"
+"void main(void) {\n"
+"    uv = vec2((gl_VertexID << 1) & 2, gl_VertexID & 2);\n"
+"	 gl_Position = vec4(uv * 2.0f + -1.0f, 0.0f, 1.0f) * u_mvp;\n"
+"}\n";
+
+const GLchar* frag_shader =
+"#version 330 core\n"
+"in vec2 uv;\n"
+"layout(location = 0) out vec4 color;\n"
+"uniform sampler2D tex0;\n"
+"void main(void) {\n"
+"    color = texture(tex0, uv);\n"
+"}\n";
 
 struct _GPU_DEVICE {
 	DWORD  cb;
@@ -170,8 +170,8 @@ void AllocRenderTarget()
 
 
 void init_shaders() {
-	GLuint vshader = compile_shader(GL_VERTEX_SHADER, 1, &g_vshader_src);
-	GLuint fshader = compile_shader(GL_FRAGMENT_SHADER, 1, &g_fshader_src);
+	GLuint vshader = compile_shader(GL_VERTEX_SHADER, 1, &vert_shader);
+	GLuint fshader = compile_shader(GL_FRAGMENT_SHADER, 1, &frag_shader);
 	GLuint program = glCreateProgram();
 
 	glAttachShader(program, vshader);
@@ -198,17 +198,15 @@ void init_shaders() {
 	g_shader.u_mvp = glGetUniformLocation(program, "u_mvp");
 
 	glGenVertexArrays(1, &g_shader.vao);
-	glGenBuffers(1, &g_shader.vbo);
-
 	glUseProgram(g_shader.program);
 
 	glUniform1i(g_shader.u_tex, 0);
 
 	float m[4][4];
 	if (g_video.hw.bottom_left_origin)
-		ortho2d(m, -1, 1, -1, 1);
-	else
 		ortho2d(m, -1, 1, 1, -1);
+	else
+		ortho2d(m, -1, 1, -1, 1);
 	glUniformMatrix4fv(g_shader.u_mvp, 1, GL_FALSE, (float*)m);
 	glUseProgram(0);
 }
@@ -217,42 +215,6 @@ void init_shaders() {
 typedef HRESULT(WINAPI * Direct3DCreate9Ex_t)(UINT SDKVersion, IDirect3D9Ex* * ppD3D);
 static HMODULE hD3D9 = NULL;
 static Direct3DCreate9Ex_t lpDirect3DCreate9Ex;
-
-void refresh_vertex_data() {
-
-	float bottom = (float)g_video.clip_h / g_video.tex_h;
-	float right = (float)g_video.clip_w / g_video.tex_w;
-
-
-	typedef struct
-	{
-		float	x;
-		float   y;
-		float   z;
-		float   s;
-		float   t;
-	} vertex_data;
-
-	vertex_data vert[] = {
-		// pos, coord
-		-1.0f,-1.0f,0., 0.0f,  bottom, // left-bottom
-		-1.0f, 1.0f,0., 0.0f,  0.0f,   // left-top
-		1.0f, -1.0f,0., right,  bottom,// right-bottom
-		1.0f,  1.0f,0., right,  0.0f,  // right-top
-	};
-
-
-	glBindVertexArray(g_shader.vao);
-
-	glBindBuffer(GL_ARRAY_BUFFER, g_shader.vbo);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(vertex_data) * 4, vert, GL_STATIC_DRAW);
-	glEnableVertexAttribArray(g_shader.i_pos);
-	glEnableVertexAttribArray(g_shader.i_coord);
-	glVertexAttribPointer(g_shader.i_pos, 3, GL_FLOAT, GL_FALSE, sizeof(vertex_data), (void*)offsetof(vertex_data, x));
-	glVertexAttribPointer(g_shader.i_coord, 2, GL_FLOAT, GL_FALSE, sizeof(vertex_data), (void*)offsetof(vertex_data, s));
-	glBindVertexArray(0);
-	glBindBuffer(GL_ARRAY_BUFFER, 0);
-}
 
 void init_framebuffer(int width, int height)
 {
@@ -294,32 +256,28 @@ void init_framebuffer(int width, int height)
 
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-	g_video.D3D_sharehandle = wglDXOpenDeviceNV(g_video.D3D_device);
-	g_video.D3D_device->GetBackBuffer(0, 0, D3DBACKBUFFER_TYPE_MONO, &g_video.D3D_backbuf);
-
 
 	
-	AllocRenderTarget();
 	
-	g_video.alloc_framebuf = true;
 
 }
 
 
 void resize_cb(int w, int h) {
-	
+	static int last_w = 0;
+	static int last_h = 0;
 	if (g_video.alloc_framebuf)
 	{
-		if (g_video.last_w != w || g_video.last_h != h)
+		if (last_w != w || last_h != h)
 		{
 			DeallocRenderTarget();
 			AllocRenderTarget();
 		}
-		g_video.last_w = w;
-		g_video.last_h = h;
+		last_w = w;
+		last_h = h;
 	}
 	
-	
+
 	int32_t vp_width = w;
 	int32_t vp_height = h;
 	//glViewport(0, 0, vp_width, vp_height);
@@ -436,9 +394,6 @@ void create_window(int width, int height, HWND hwnd) {
 		&parameters, NULL, &g_video.D3D_device);
 	d3d->Release();
 	init_shaders();
-
-	g_video.last_w = 0;
-	g_video.last_h = 0;
 	g_win = true;
 }
 
@@ -513,30 +468,31 @@ void video_configure(const struct retro_game_geometry *geom, HWND hwnd) {
 		g_video.pixfmt = GL_UNSIGNED_SHORT_5_5_5_1;
 	CenterWindow(hwnd);
 
-	glGenTextures(1, &g_video.tex_id);
+	
 
 	g_video.pitch = geom->base_width * g_video.bpp;
 
+	glGenTextures(1, &g_video.tex_id);
 	glBindTexture(GL_TEXTURE_2D, g_video.tex_id);
-
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, geom->max_width, geom->max_height, 0,
-		g_video.pixtype, g_video.pixfmt, NULL);
-
-	glBindTexture(GL_TEXTURE_2D, 0);
-
-	init_framebuffer(geom->base_width, geom->base_height);
+	if (g_video.hw.context_type != RETRO_HW_CONTEXT_NONE)
+	{
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, geom->max_width, geom->max_height, 0,
+			g_video.pixtype, g_video.pixfmt, NULL);
+		glBindTexture(GL_TEXTURE_2D, 0);
+		init_framebuffer(geom->base_width, geom->base_height);
+		g_video.hw.context_reset();
+	}
+	g_video.D3D_sharehandle = wglDXOpenDeviceNV(g_video.D3D_device);
+	g_video.D3D_device->GetBackBuffer(0, 0, D3DBACKBUFFER_TYPE_MONO, &g_video.D3D_backbuf);
+	AllocRenderTarget();
+	g_video.alloc_framebuf = true;
 
 	g_video.tex_w = geom->max_width;
 	g_video.tex_h = geom->max_height;
-	g_video.clip_w = geom->base_width;
-	g_video.clip_h = geom->base_height;
-
-	refresh_vertex_data();
-
-	if (g_video.hw.context_type != RETRO_HW_CONTEXT_NONE)g_video.hw.context_reset();
+	g_video.clip_w = 0;
+	g_video.clip_h =0;	
 }
 
 
@@ -566,30 +522,33 @@ bool video_set_pixel_format(unsigned format) {
 
 
 void video_refresh(const void *data, unsigned width, unsigned height, unsigned pitch) {
-	if (g_video.clip_w != width || g_video.clip_h != height)
-	{
-		g_video.clip_h = height;
-		g_video.clip_w = width;
-		refresh_vertex_data();	
-	}
-	glBindFramebuffer(GL_FRAMEBUFFER, g_video.blit_fbo);
-
-
 	RECT clientRect;
 	GetClientRect(g_video.D3D_hwnd, &clientRect);
-	resize_cb(clientRect.right, clientRect.bottom);
 
+	glBindFramebuffer(GL_FRAMEBUFFER, g_video.blit_fbo);
 	glBindTexture(GL_TEXTURE_2D, g_video.tex_id);
-
 	if (pitch != g_video.pitch) {
 		g_video.pitch = pitch;
 		glPixelStorei(GL_UNPACK_ROW_LENGTH, g_video.pitch / g_video.bpp);
 	}
+	if (g_video.clip_w != width || g_video.clip_h != height)
+	{
+		g_video.clip_h = height;
+		g_video.clip_w = width;
+		if (data && data != RETRO_HW_FRAME_BUFFER_VALID)
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8,width,height, 0,g_video.pixtype, g_video.pixfmt,data);
 
-	if (data && data != RETRO_HW_FRAME_BUFFER_VALID) {
-		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, width, height,
-			g_video.pixtype, g_video.pixfmt, data);
 	}
+	else
+	{
+		if (data && data != RETRO_HW_FRAME_BUFFER_VALID) {
+			glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, width, height,
+				g_video.pixtype, g_video.pixfmt, data);
+		}
+	}
+
+	resize_cb(clientRect.right, clientRect.bottom);
+	
 
 	glClear(GL_COLOR_BUFFER_BIT);
 
@@ -597,12 +556,9 @@ void video_refresh(const void *data, unsigned width, unsigned height, unsigned p
 
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, g_video.tex_id);
-
-
 	glBindVertexArray(g_shader.vao);
-	glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+	glDrawArrays(GL_TRIANGLES, 0, 3);
 	glBindVertexArray(0);
-
 	glUseProgram(0);
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
@@ -641,10 +597,7 @@ void video_deinit() {
 		glDeleteRenderbuffers(1, &g_video.rbo_id);
 		g_video.rbo_id = 0;
 	}
-
-	glDisableVertexAttribArray(1);
-	glDeleteBuffers(1, &g_shader.vbo);
-	glDeleteVertexArrays(1, &g_shader.vbo);
+	glDeleteVertexArrays(1, &g_shader.vao);
 
 	if (g_video.hRC)
 	{

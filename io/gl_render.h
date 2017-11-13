@@ -14,9 +14,6 @@ typedef struct{
 
 	int glmajor;
 	int glminor;
-	int last_h;
-	int last_w;
-
 
 	GLuint blit_tex;
 	GLuint blit_fbo;

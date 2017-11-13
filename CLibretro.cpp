@@ -103,11 +103,11 @@ void Audio::drc()
 		int delta_half = available - half;
 		double adjust = 1.0 + skew * ((double)delta_half / half);
 		bool underrun = (available < low_water_size);
-		//if (avg > system_fps)
-		//	avg = system_fps;
-		if ((avg < system_fps) && underrun) {
+		if (avg > system_fps)
+			avg = system_fps;
+		if ((avg < refreshrate) && underrun) {
 			double sampleRate = system_rate *adjust;
-		//	setRate(sampleRate);
+			setRate(sampleRate);
 		}
 	}
 	listDeltaMA.push_back(fps);	
@@ -216,13 +216,10 @@ void Audio::mix(const int16_t* samples, size_t frames)
 	}
 
 	int size = out_len * 2;
-	//std::unique_lock<std::mutex> l(lock);
-	//buffer_full.wait(l, [this, size]() {return fifo_write_avail(_fifo) > size; });
 	while (size > fifo_write_avail(_fifo))Sleep(1);
 	fifo_write(_fifo, output, size);
-
-
-
+	//std::unique_lock<std::mutex> l(lock);
+	//buffer_full.wait(l, [this, size]() {return size < fifo_write_avail(_fifo); });
 	retro_time_t to_sleep_ms = (
 		(frame_limit_last_time + frame_limit_minimum_time)
 		- microseconds_now()) / 1000;
@@ -237,6 +234,8 @@ void Audio::mix(const int16_t* samples, size_t frames)
 	}
 
 	frame_limit_last_time = microseconds_now();
+
+	
 
 }
 
@@ -819,13 +818,11 @@ bool CLibretro::loadfile(TCHAR* filename, TCHAR* core_filename,bool gamespecific
 	g_video = { 0 };
 	g_video.hw.version_major = 3;
 	g_video.hw.version_minor = 3;
-	g_video.hw.context_type = RETRO_HW_CONTEXT_OPENGL_CORE;
+	g_video.hw.context_type = RETRO_HW_CONTEXT_NONE;
 	g_video.hw.context_reset = NULL;
 	g_video.hw.context_destroy = NULL;
 	variables_changed = false;
 
-
-	
 	if (!core_load(core_filename,gamespecificoptions,filename,core_filename))
 	{
 		printf("FAILED TO LOAD CORE!!!!!!!!!!!!!!!!!!");
@@ -883,7 +880,7 @@ bool CLibretro::loadfile(TCHAR* filename, TCHAR* core_filename,bool gamespecific
 	DWM_TIMING_INFO timing_info;
 	timing_info.cbSize = sizeof(timing_info);
 	DwmGetCompositionTimingInfo(NULL, &timing_info);
-	double refreshr = timing_info.rateRefresh.uiNumerator / 1000;
+	double refreshr = timing_info.qpcRefreshPeriod / 1000;
 	double time_skew = fabs(1.0f - av.timing.fps / refreshr);
 	double orig_ratio = (double)refreshr / av.timing.fps;
 	_audio.init(orig_ratio, refreshr, time_skew);
