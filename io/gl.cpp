@@ -161,11 +161,6 @@ void AllocRenderTarget()
 	g_video.GL_htexture = NULL;
 	g_video.D3D_GLtarget->Release();
 	g_video.D3D_GLtarget = NULL;
-
-	//those D3D share handles are weird stuff like 0xC0007000, closing them throws errors
-	//I'll assume it's freed by deleting the rendertarget, device or IDirect3D9Ex, and that reusing it does not leak
-	//CloseHandle(D3D_sharetexture);
-	//D3D_sharetexture = NULL;
 }
 
 

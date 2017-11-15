@@ -122,6 +122,7 @@
       <PrecompiledHeaderFile>..\StdAfx.h</PrecompiledHeaderFile>
       <BufferSecurityCheck>false</BufferSecurityCheck>
       <CallingConvention>Cdecl</CallingConvention>
+      <FloatingPointModel>Strict</FloatingPointModel>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>

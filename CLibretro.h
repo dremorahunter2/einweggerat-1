@@ -30,7 +30,7 @@ extern "C" {
 	{
 	
 	public:
-	bool init(double srate, double refreshra, double ts);
+	bool init(double refreshra);
 	void destroy();
 	void reset();
 	bool setRate(double rate);
@@ -72,10 +72,10 @@ private:
 public:
 	struct core_vars
 	{
-		std::string name;
-		std::string var;
-		std::string description;
-		std::string usevars;
+		char name[100];
+		char var[100];
+	    char description[256];
+		char usevars[256];
 	};
 	TCHAR inputcfg_path[MAX_PATH];
 	TCHAR corevar_path[MAX_PATH];

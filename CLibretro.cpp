@@ -45,9 +45,10 @@ static mal_uint32 sdl_audio_callback(mal_device* pDevice, mal_uint32 frameCount,
 }
 
 mal_uint32 Audio::fill_buffer(uint8_t* out, mal_uint32 count) {
-	//std::lock_guard<std::mutex> lg(mutex);	
+	std::lock_guard<std::mutex> lg(mutex);	
 	size_t avail = fifo_read_avail(_fifo);
 	size_t write_size = count > avail ? avail : count;
+	buffer_full.notify_all();
 	fifo_read(_fifo, out, write_size);
 	memset(out + write_size, 0, count - write_size);
 	return count;
@@ -88,7 +89,7 @@ void Audio::drc()
 	}
 	if (listDeltaMA.size() == drc_capac)
 	{
-		drc_capac = 2048;
+		drc_capac = 256;
 		double sum = 0;
 		for (std::vector<double>::iterator p = listDeltaMA.begin(); p != listDeltaMA.end(); ++p)
 		sum += (double)*p;
@@ -103,10 +104,13 @@ void Audio::drc()
 		int delta_half = available - half;
 		double adjust = 1.0 + skew * ((double)delta_half / half);
 		bool underrun = (available < low_water_size);
-		if (avg > system_fps)
+		if (avg > 61)
 			avg = system_fps;
-		if ((avg < refreshrate) && underrun) {
-			double sampleRate = system_rate *adjust;
+		//if ((avg < system_fps) && underrun) {
+		if (underrun) {
+			//double sampleRate = system_rate * avg / system_fps;
+			double sampleRate = system_rate;
+			sampleRate +=-adjust;
 			setRate(sampleRate);
 		}
 	}
@@ -118,16 +122,24 @@ static retro_time_t frame_limit_last_time = 0.0;
 
 static const int srate_tab[] = { 8000,11025,16000,22050,24000,32000,44100,48000};
 #define ARRAY_SIZE(x) ((sizeof x) / (sizeof *x))
-bool Audio::init(double ratio, double refreshra, double ts)
+bool Audio::init(double refreshra)
 {
-	skew = ts;
-	drc_capac = 512;
-	refreshrate = refreshra;
 	retro_system_av_info av = { 0 };
 	g_retro.retro_get_system_av_info(&av);
+
 	system_rate = av.timing.sample_rate;
 	system_fps = av.timing.fps;
-	double srate = ratio *system_rate;
+	double orig_ratio = (double)refreshra / system_fps;
+	skew = fabs(1.0f - system_fps / refreshra);
+	if (skew >= 0.005)skew = 0.005;
+	drc_capac = 512;
+	refreshrate = refreshra;
+
+	if (skew <= 0.005)
+	{
+		system_rate *= (orig_ratio);
+	}
+
 	_opened = true;
 	_mute = false;
 	_scale = 1.0f;
@@ -135,7 +147,7 @@ bool Audio::init(double ratio, double refreshra, double ts)
 	_coreRate = 0;
 	_resampler = NULL;
 	_sampleRate = 44100;
-	setRate(srate);
+	setRate(system_rate);
 	if (mal_context_init(NULL, 0, &context) != MAL_SUCCESS) {
 		printf("Failed to initialize context.");
 		return false;
@@ -216,10 +228,11 @@ void Audio::mix(const int16_t* samples, size_t frames)
 	}
 
 	int size = out_len * 2;
-	while (size > fifo_write_avail(_fifo))Sleep(1);
+	std::unique_lock<std::mutex> l(lock);
+	buffer_full.wait(l, [this, size]() {return size < fifo_write_avail(_fifo); });
+
 	fifo_write(_fifo, output, size);
-	//std::unique_lock<std::mutex> l(lock);
-	//buffer_full.wait(l, [this, size]() {return size < fifo_write_avail(_fifo); });
+
 	retro_time_t to_sleep_ms = (
 		(frame_limit_last_time + frame_limit_minimum_time)
 		- microseconds_now()) / 1000;
@@ -317,17 +330,18 @@ void init_coresettings(retro_variable *var)
 		while (var->key && var->value)
 		{
 			CLibretro::core_vars vars_struct;
-			vars_struct.name = var->key;
+			strcpy(vars_struct.name, var->key);
+		   
 			
 			char descript[50] = { 0 };
 			char *e = strchr((char*)var->value, ';');
 			strncpy(descript, var->value, (int)(e - (char*)var->value));
-			vars_struct.description = descript;
+			strcpy(vars_struct.description,descript);
 
 			char * pch = strstr((char*)var->value, (char*)"; ");
 			pch += strlen("; ");
 			int vars = 0;
-			vars_struct.usevars = pch;
+			strcpy(vars_struct.usevars, pch);
 			while (pch != NULL)
 			{
 				char val[255] = { 0 };
@@ -339,7 +353,7 @@ void init_coresettings(retro_variable *var)
 				}
 				strncpy(val, pch, str2 - pch);
 				if (!vars) {
-					vars_struct.var = val;
+					strcpy(vars_struct.var,val);
 					ini_property_add(ini, INI_GLOBAL_SECTION, var->key, strlen(var->key), val, strlen(val));
 				}
 				pch += str2 - pch++;
@@ -372,18 +386,18 @@ void init_coresettings(retro_variable *var)
 		while (var->key && var->value)
 		{
 			CLibretro::core_vars vars_struct;
-			vars_struct.name = var->key;
+			strcpy(vars_struct.name, var->key);
 			char descript[50] = { 0 };
 			char *e = strchr((char*)var->value, ';');
 			strncpy(descript, var->value, (int)(e - (char*)var->value));
-			vars_struct.description = descript;
+			strcpy(vars_struct.description, descript);
 			char * pch = strstr((char*)var->value, (char*)"; ");
 			pch += strlen("; ");
 			int vars = 0;
-			vars_struct.usevars = pch;
+			strcpy(vars_struct.usevars, pch);
 			int second_index = ini_find_property(ini, INI_GLOBAL_SECTION, (char*)var->key, strlen(var->key));
 			const char* variable_val = ini_property_value(ini, INI_GLOBAL_SECTION, second_index);
-			vars_struct.var = variable_val;
+			strcpy(vars_struct.var, variable_val);
 			retro->variables.push_back(vars_struct);
 			++var;
 		}
@@ -396,9 +410,9 @@ const char* load_coresettings(retro_variable *var)
 	CLibretro *retro = CLibretro::GetSingleton();
 	for (int i = 0; i < retro->variables.size(); i++)
 	{
-		if (strcmp(retro->variables[i].name.c_str(), var->key) == 0)
+		if (strcmp(retro->variables[i].name, var->key) == 0)
 		{
-			return retro->variables[i].var.c_str();
+			return retro->variables[i].var;
 		}
 	}
 	return NULL;
@@ -880,10 +894,10 @@ bool CLibretro::loadfile(TCHAR* filename, TCHAR* core_filename,bool gamespecific
 	DWM_TIMING_INFO timing_info;
 	timing_info.cbSize = sizeof(timing_info);
 	DwmGetCompositionTimingInfo(NULL, &timing_info);
-	double refreshr = timing_info.qpcRefreshPeriod / 1000;
-	double time_skew = fabs(1.0f - av.timing.fps / refreshr);
-	double orig_ratio = (double)refreshr / av.timing.fps;
-	_audio.init(orig_ratio, refreshr, time_skew);
+	double refreshr = (timing_info.qpcRefreshPeriod) / 1000;
+
+	
+	_audio.init(refreshr);
 
 	listDeltaMA.clear();
 	frame_count = 0;

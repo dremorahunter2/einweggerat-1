@@ -115,7 +115,8 @@ public:
 				if (lstrcmpW(str.c_str(), (LPCTSTR)name) == 0)
 				{
 					wstring var = szValue;
-					retro->variables[i].var = ws2s(var);
+					string var2 =ws2s(var);
+					strcpy(retro->variables[i].var, var2.c_str());
 				}
 
 			}
@@ -134,7 +135,8 @@ public:
 					const char* str = vValue.boolVal ? "enabled" : "disabled";
 					std::stringstream temp;
 					temp << str;
-					retro->variables[i].var = temp.str();
+					const char* str2 = temp.str().c_str();
+					strcpy(retro->variables[i].var,str2) ;
 				}
 
 			}
@@ -170,7 +172,7 @@ public:
 				
 				vector <wstring> colour;
 				colour.clear();
-				char *pch = (char*)retro->variables[i].usevars.c_str();
+				char *pch = (char*)retro->variables[i].usevars;
 				while (pch != NULL)
 				{
 					char val[255] = { 0 };
@@ -225,8 +227,8 @@ public:
 		FILE *fp = NULL;
 		ini_t* ini = ini_create(NULL);
 		for (int i = 0; i < retro->variables.size(); i++){
-			ini_property_add(ini, INI_GLOBAL_SECTION, retro->variables[i].name.c_str(),retro->variables[i].name.length(), retro->variables[i].var.c_str(), 
-			retro->variables[i].var.length());
+			ini_property_add(ini, INI_GLOBAL_SECTION, retro->variables[i].name,strlen(retro->variables[i].name), retro->variables[i].var, 
+			strlen(retro->variables[i].var));
 		}
 		int size = ini_save(ini, NULL, 0); // Find the size needed
 		char* data = (char*)malloc(size);
