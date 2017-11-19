@@ -36,7 +36,6 @@ extern "C" {
 	bool init(double refreshra);
 	void destroy();
 	void reset();
-	void drc();
 	void mix(const int16_t* samples, size_t sample_count);
 	mal_uint32 fill_buffer(uint8_t* pSamples, mal_uint32 samplecount);
 	mal_context context;

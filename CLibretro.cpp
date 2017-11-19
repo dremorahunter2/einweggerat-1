@@ -79,19 +79,6 @@ long long microseconds_now() {
 		return GetTickCount();
 	}
 }
-void Audio::drc()
-{
-		int available = fifo_write_avail(_fifo);
-		int total = SAMPLE_COUNT;
-		int low_water_size = (unsigned)(total * 3 / 4);
-		int half = total / 2;
-		int delta_half = available - half;
-		double adjust = 1.0 + skew * ((double)delta_half / half);
-		bool underrun = (available < low_water_size);
-		if (underrun) {
-			resamp_ratio = resamp_original * adjust;
-		}
-}
 
 static retro_time_t frame_limit_minimum_time = 0.0;
 static retro_time_t frame_limit_last_time = 0.0;
@@ -115,7 +102,6 @@ bool Audio::init(double refreshra)
 	output_float = new float[SAMPLE_COUNT * 4];
 	output = new int16_t[SAMPLE_COUNT * 4];
 	input_float = new float[SAMPLE_COUNT];
-
 
 	resample = resampler_sinc_init(resamp_ratio);
 	if (mal_context_init(NULL, 0, &context) != MAL_SUCCESS) {
@@ -159,7 +145,11 @@ void Audio::mix(const int16_t* samples, size_t frames)
 {
 	uint32_t in_len = frames * 2;
 
-	drc();
+	int available = fifo_write_avail(_fifo);
+	int half = SAMPLE_COUNT / 2;
+	int delta_half = available - half;
+	double adjust = 1.0 + skew * ((double)delta_half / half);
+	resamp_ratio = resamp_original * adjust;
 
 	const float div = (1.0f / 32768.0f);
 	for (int i = 0; i < in_len; i++) {
@@ -197,15 +187,8 @@ void Audio::mix(const int16_t* samples, size_t frames)
 		Sleep(sleep_ms);
 		return;
 	}
-
 	frame_limit_last_time = microseconds_now();
 }
-
-
-
-
-
-
 
 static void core_unload() {
 	if (g_retro.initialized)
@@ -217,29 +200,6 @@ static void core_unload() {
 	}
 	
 }
-
-enum COLOR
-{
-	// Text foreground colors
-	// Standard text colors
-	GRAY_TEXT = 8, BLUE_TEXT, GREEN_TEXT,
-	TEAL_TEXT, RED_TEXT, PINK_TEXT,
-	YELLOW_TEXT, WHITE_TEXT,
-	// Faded text colors
-	BLACK_TEXT = 0, BLUE_FADE_TEXT, GREEN_FADE_TEXT,
-	TEAL_FADE_TEXT, RED_FADE_TEXT, PINK_FADE_TEXT,
-	YELLOW_FADE_TEXT, WHITE_FADE_TEXT,
-	// Standard text background color
-	GRAY_BACKGROUND = GRAY_TEXT << 4, BLUE_BACKGROUND = BLUE_TEXT << 4,
-	GREEN_BACKGROUND = GREEN_TEXT << 4, TEAL_BACKGROUND = TEAL_TEXT << 4,
-	RED_BACKGROUND = RED_TEXT << 4, PINK_BACKGROUND = PINK_TEXT << 4,
-	YELLOW_BACKGROUND = YELLOW_TEXT << 4, WHITE_BACKGROUND = WHITE_TEXT << 4,
-	// Faded text background color
-	BLACK_BACKGROUND = BLACK_TEXT << 4, BLUE_FADE_BACKGROUND = BLUE_FADE_TEXT << 4,
-	GREEN_FADE_BACKGROUND = GREEN_FADE_TEXT << 4, TEAL_FADE_BACKGROUND = TEAL_FADE_TEXT << 4,
-	RED_FADE_BACKGROUND = RED_FADE_TEXT << 4, PINK_FADE_BACKGROUND = PINK_FADE_TEXT << 4,
-	YELLOW_FADE_BACKGROUND = YELLOW_FADE_TEXT << 4, WHITE_FADE_BACKGROUND = WHITE_FADE_TEXT << 4
-};
 
 static void core_log(enum retro_log_level level, const char *fmt, ...) {
 	char buffer[4096] = { 0 };
@@ -892,7 +852,7 @@ void CLibretro::run()
 			if (currentTime - lastTime >= 0.5) { // If last prinf() was more than 1 sec ago
 												 // printf and reset timer
 				TCHAR buffer[100] = { 0 };
-				int len = swprintf(buffer, 100, L"einweggerat - 64bit: %2f ms/frame\n, %d FPS", 1000.0 / double(nbFrames),nbFrames);
+				int len = swprintf(buffer, 100, L"einweggerat: %2f ms/frame\n, %d FPS", 1000.0 / double(nbFrames),nbFrames);
 				SetWindowText(emulator_hwnd, buffer);
 				nbFrames = 0;
 				lastTime += 1.0;
