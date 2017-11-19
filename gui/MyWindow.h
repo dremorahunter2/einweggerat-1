@@ -98,7 +98,7 @@ public:
 	{
 		LPNMPROPERTYITEM pnpi = (LPNMPROPERTYITEM)pnmh;
 		int type =pnpi->prop->GetKind();
-		LPCTSTR* name = (LPCTSTR*)pnpi->prop->GetName();
+		LPCTSTR name = pnpi->prop->GetName();
 		if (type == 4)
 		{
 			TCHAR szValue[100] = { 0 };
@@ -132,11 +132,8 @@ public:
 				wstring str2 = (LPCTSTR)name;
 				if (lstrcmp(str.c_str(), str2.c_str()) == 0)
 				{
-					const char* str = vValue.boolVal ? "enabled" : "disabled";
-					std::stringstream temp;
-					temp << str;
-					const char* str2 = temp.str().c_str();
-					strcpy(retro->variables[i].var,str2) ;
+					const char* str3 = vValue.boolVal ? "enabled" : "disabled";
+					strcpy(retro->variables[i].var,str3) ;
 				}
 
 			}

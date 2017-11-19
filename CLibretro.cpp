@@ -231,9 +231,9 @@ void init_coresettings(retro_variable *var)
 	CLibretro * retro = CLibretro::GetSingleton();
 	FILE *fp = NULL;
 	fp = _wfopen(retro->corevar_path, L"r");
-	
 	if (!fp)
 	{
+
 		//create a new file with defaults
 		ini_t* ini = ini_create(NULL);
 		while (var->key && var->value)
@@ -241,7 +241,6 @@ void init_coresettings(retro_variable *var)
 			CLibretro::core_vars vars_struct;
 			strcpy(vars_struct.name, var->key);
 		   
-			
 			char descript[50] = { 0 };
 			char *e = strchr((char*)var->value, ';');
 			strncpy(descript, var->value, (int)(e - (char*)var->value));
@@ -294,12 +293,10 @@ void init_coresettings(retro_variable *var)
 		free(data);
 		while (var->key && var->value)
 		{
-			CLibretro::core_vars vars_struct;
+			CLibretro::core_vars vars_struct = { 0 };
 			strcpy(vars_struct.name, var->key);
-			char descript[50] = { 0 };
 			char *e = strchr((char*)var->value, ';');
-			strncpy(descript, var->value, (int)(e - (char*)var->value));
-			strcpy(vars_struct.description, descript);
+			strncpy(vars_struct.description, var->value, (int)(e - var->value));
 			char * pch = strstr((char*)var->value, (char*)"; ");
 			pch += strlen("; ");
 			int vars = 0;
@@ -737,6 +734,7 @@ CLibretro::~CLibretro(void)
 bool CLibretro::loadfile(TCHAR* filename, TCHAR* core_filename,bool gamespecificoptions)
 {
 	if (isEmulating)isEmulating = false;
+	variables.clear();
 	struct retro_system_info system = {0};	
 	g_video = { 0 };
 	g_video.hw.version_major = 3;
