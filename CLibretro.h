@@ -43,12 +43,8 @@ extern "C" {
 	mal_device device;
 	unsigned client_rate;
 	fifo_buffer* _fifo;
-	bool           _opened;
-	bool           _mute;
-	float          _scale;
 	float fps;
 	double system_fps;
-	double refreshrate;
 	double skew;
 	double system_rate;
 	double resamp_ratio;
@@ -90,7 +86,6 @@ public:
 	~CLibretro();
 	DWORD rate;
 	bool paused;
-	std::list<double> listDeltaMA;
 	unsigned frame_count;
 	bool running();
 	bool loadfile(TCHAR* filename, TCHAR* core_filename, bool gamespecificoptions);

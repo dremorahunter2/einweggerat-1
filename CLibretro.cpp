@@ -84,7 +84,6 @@ void Audio::drc()
 		int available = fifo_write_avail(_fifo);
 		int total = SAMPLE_COUNT;
 		int low_water_size = (unsigned)(total * 3 / 4);
-		assert(total != 0);
 		int half = total / 2;
 		int delta_half = available - half;
 		double adjust = 1.0 + skew * ((double)delta_half / half);
@@ -105,23 +104,18 @@ bool Audio::init(double refreshra)
 	system_fps = av.timing.fps;
 	skew = fabs(1.0f - system_fps / refreshra);
 	if (skew >= 0.005)skew = 0.005;
-	refreshrate = refreshra;
-
 	if (skew <= 0.005)
 	{
 		system_rate *= ((double)refreshra / system_fps);
 	}
 
-	_opened = true;
-	_mute = false;
-	_scale = 1.0f;
 	client_rate = 44100;
-
 	resamp_ratio = resamp_original = (client_rate / system_rate);
 
 	output_float = new float[SAMPLE_COUNT * 4];
 	output = new int16_t[SAMPLE_COUNT * 4];
 	input_float = new float[SAMPLE_COUNT];
+
 
 	resample = resampler_sinc_init(resamp_ratio);
 	if (mal_context_init(NULL, 0, &context) != MAL_SUCCESS) {
@@ -164,6 +158,7 @@ void Audio::reset()
 void Audio::mix(const int16_t* samples, size_t frames)
 {
 	uint32_t in_len = frames * 2;
+
 	drc();
 
 	const float div = (1.0f / 32768.0f);
@@ -192,9 +187,7 @@ void Audio::mix(const int16_t* samples, size_t frames)
 
 	fifo_write(_fifo, output, out_len);
 
-	retro_time_t to_sleep_ms = (
-		(frame_limit_last_time + frame_limit_minimum_time)
-		- microseconds_now()) / 1000;
+	retro_time_t to_sleep_ms = ((frame_limit_last_time + frame_limit_minimum_time)- microseconds_now()) / 1000;
 
 	if (to_sleep_ms > 0)
 	{
@@ -206,9 +199,6 @@ void Audio::mix(const int16_t* samples, size_t frames)
 	}
 
 	frame_limit_last_time = microseconds_now();
-
-	
-
 }
 
 
@@ -854,15 +844,10 @@ bool CLibretro::loadfile(TCHAR* filename, TCHAR* core_filename,bool gamespecific
 	timing_info.cbSize = sizeof(timing_info);
 	DwmGetCompositionTimingInfo(NULL, &timing_info);
 	double refreshr = (timing_info.qpcRefreshPeriod) / 1000;
-
-	
 	_audio.init(refreshr);
-
-	listDeltaMA.clear();
 	frame_count = 0;
 	paused = false;
 	isEmulating = true;
-
 	lastTime = milliseconds_now()/1000;
     nbFrames = 0;
 
