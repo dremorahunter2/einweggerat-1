@@ -37,7 +37,10 @@
     <ClCompile Include="libretro-common-master\queues\fifo_queue.c">
       <Filter>io</Filter>
     </ClCompile>
-    <ClCompile Include="io\audio\resample.c">
+    <ClCompile Include="io\audio\cc_resampler.c">
+      <Filter>io</Filter>
+    </ClCompile>
+    <ClCompile Include="libretro-common-master\memmap\memalign.c">
       <Filter>io</Filter>
     </ClCompile>
   </ItemGroup>

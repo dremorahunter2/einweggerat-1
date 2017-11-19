@@ -6,8 +6,7 @@
 #include <chrono>
 #include <mutex>
 #include <condition_variable>
-#define OUTSIDE_SPEEX
-#include "io/audio/speex_resampler.h"
+#include <audio/audio_resampler.h>
 #define MAL_NO_NULL
 #define MAL_NO_WASAPI
 #include "io/input.h"
@@ -26,6 +25,10 @@ namespace std
 extern "C" {
 #endif
 
+	void *resampler_sinc_init(double bandwidth_mod);
+	void resampler_sinc_process(void *re_, struct resampler_data *data);
+	void resampler_sinc_free(void *re_);
+
 	class Audio
 	{
 	
@@ -33,34 +36,30 @@ extern "C" {
 	bool init(double refreshra);
 	void destroy();
 	void reset();
-	bool setRate(double rate);
 	void drc();
 	void mix(const int16_t* samples, size_t sample_count);
 	mal_uint32 fill_buffer(uint8_t* pSamples, mal_uint32 samplecount);
 	mal_context context;
 	mal_device device;
-	unsigned _sampleRate;
-	unsigned _coreRate;
-	SpeexResamplerState* _resampler;
+	unsigned client_rate;
 	fifo_buffer* _fifo;
 	bool           _opened;
 	bool           _mute;
 	float          _scale;
-	const int16_t* _samples;
-	size_t         _frames;
 	float fps;
 	double system_fps;
 	double refreshrate;
 	double skew;
 	double system_rate;
+	double resamp_ratio;
+	double resamp_original;
+	void* resample;
+	float *input_float;
+	float *output_float;
+	int16_t* output;
 
 	std::mutex lock;
 	std::condition_variable buffer_full;
-	std::chrono::time_point<std::chrono::system_clock> start, end;
-	double getDeltaMovingAverage();
-	void sync_video_tick(void);
-	std::vector<double> listDeltaMA;
-	int drc_capac;
 	};
 
 class CLibretro

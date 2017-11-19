@@ -235,7 +235,7 @@
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|x64'">..\StdAfx.h</PrecompiledHeaderFile>
     </ClCompile>
     <ClCompile Include="io\abstract_file.cpp" />
-    <ClCompile Include="io\audio\resample.c" />
+    <ClCompile Include="io\audio\cc_resampler.c" />
     <ClCompile Include="io\bind_list.cpp" />
     <ClCompile Include="io\blargg_common.cpp" />
     <ClCompile Include="io\blargg_errors.cpp" />
@@ -245,6 +245,7 @@
     <ClCompile Include="io\glad.c" />
     <ClCompile Include="io\guid_container.cpp" />
     <ClCompile Include="io\input.cpp" />
+    <ClCompile Include="libretro-common-master\memmap\memalign.c" />
     <ClCompile Include="libretro-common-master\queues\fifo_queue.c" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>

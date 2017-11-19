@@ -81,21 +81,6 @@ long long microseconds_now() {
 }
 void Audio::drc()
 {
-	static uint64_t fps_time = 0;
-	uint64_t now = ::microseconds_now();
-	{
-		fps = (1000000.0) / (now - fps_time);
-		fps_time = now;
-	}
-	if (listDeltaMA.size() == drc_capac)
-	{
-		drc_capac = 256;
-		double sum = 0;
-		for (std::vector<double>::iterator p = listDeltaMA.begin(); p != listDeltaMA.end(); ++p)
-		sum += (double)*p;
-		float avg = sum / listDeltaMA.size();
-		listDeltaMA.clear();
-	
 		int available = fifo_write_avail(_fifo);
 		int total = SAMPLE_COUNT;
 		int low_water_size = (unsigned)(total * 3 / 4);
@@ -104,55 +89,46 @@ void Audio::drc()
 		int delta_half = available - half;
 		double adjust = 1.0 + skew * ((double)delta_half / half);
 		bool underrun = (available < low_water_size);
-		if (avg > 61)
-			avg = system_fps;
-		//if ((avg < system_fps) && underrun) {
 		if (underrun) {
-			//double sampleRate = system_rate * avg / system_fps;
-			double sampleRate = system_rate;
-			sampleRate +=-adjust;
-			setRate(sampleRate);
+			resamp_ratio = resamp_original * adjust;
 		}
-	}
-	listDeltaMA.push_back(fps);	
 }
 
 static retro_time_t frame_limit_minimum_time = 0.0;
 static retro_time_t frame_limit_last_time = 0.0;
 
-static const int srate_tab[] = { 8000,11025,16000,22050,24000,32000,44100,48000};
-#define ARRAY_SIZE(x) ((sizeof x) / (sizeof *x))
 bool Audio::init(double refreshra)
 {
 	retro_system_av_info av = { 0 };
 	g_retro.retro_get_system_av_info(&av);
-
 	system_rate = av.timing.sample_rate;
 	system_fps = av.timing.fps;
-	double orig_ratio = (double)refreshra / system_fps;
 	skew = fabs(1.0f - system_fps / refreshra);
 	if (skew >= 0.005)skew = 0.005;
-	drc_capac = 512;
 	refreshrate = refreshra;
 
 	if (skew <= 0.005)
 	{
-		system_rate *= (orig_ratio);
+		system_rate *= ((double)refreshra / system_fps);
 	}
 
 	_opened = true;
 	_mute = false;
 	_scale = 1.0f;
-	_samples = NULL;
-	_coreRate = 0;
-	_resampler = NULL;
-	_sampleRate = 44100;
-	setRate(system_rate);
+	client_rate = 44100;
+
+	resamp_ratio = resamp_original = (client_rate / system_rate);
+
+	output_float = new float[SAMPLE_COUNT * 4];
+	output = new int16_t[SAMPLE_COUNT * 4];
+	input_float = new float[SAMPLE_COUNT];
+
+	resample = resampler_sinc_init(resamp_ratio);
 	if (mal_context_init(NULL, 0, &context) != MAL_SUCCESS) {
 		printf("Failed to initialize context.");
 		return false;
 	}
-	mal_device_config config = mal_device_config_init_playback(mal_format_s16, 2, _sampleRate, sdl_audio_callback);
+	mal_device_config config = mal_device_config_init_playback(mal_format_s16, 2, client_rate, sdl_audio_callback);
 	config.bufferSizeInFrames = 1024;
 	_fifo = fifo_new(SAMPLE_COUNT);
 	if (mal_device_init(&context, mal_device_type_playback, NULL, &config, this, &device) != MAL_SUCCESS) {
@@ -160,9 +136,6 @@ bool Audio::init(double refreshra)
 		return false;
 	}
 	mal_device_start(&device);
-	start = std::chrono::system_clock::now();
-	fps = 0.0f;
-	listDeltaMA.clear();
 	frame_limit_last_time = microseconds_now();
 	frame_limit_minimum_time = (retro_time_t)roundf(1000000.0f/ (av.timing.fps));
 
@@ -173,10 +146,10 @@ void Audio::destroy()
 	{
 		mal_device_stop(&device);
 		mal_context_uninit(&context);
-		if (_resampler != NULL)
-		{
-			speex_resampler_destroy(_resampler);
-		}
+		delete[] input_float;
+		delete[] output;
+		delete[] output_float;
+		resampler_sinc_free(resample);
 	}
 }
 void Audio::reset()
@@ -184,54 +157,40 @@ void Audio::reset()
 
 }
 
-bool Audio::setRate(double rate)
-{
-	if (_resampler != NULL)
-	{
-		speex_resampler_destroy(_resampler);
-		_resampler = NULL;
-	}
 
-	_coreRate = floor(rate + 0.05);
-
-	if (_coreRate != _sampleRate)
-	{
-		int error;
-		_resampler = speex_resampler_init(2, _coreRate, _sampleRate, SPEEX_RESAMPLER_QUALITY_DESKTOP, &error);
-	}
-	return true;
-
-}
+#define MAX(x,y) ((x)>(y)) ? (x) : (y)
+#define MIN(x,y) ((x)<(y)) ? (x) : (y)
 
 void Audio::mix(const int16_t* samples, size_t frames)
 {
-	//_samples = samples;
-	_frames = frames;
 	uint32_t in_len = frames * 2;
 	drc();
-	uint32_t out_len = trunc((uint32_t)(in_len * _sampleRate / _coreRate)) + 1;
-	int16_t* output = (int16_t*)alloca(out_len * 2);
-	memset(output, 0, out_len * 2);
 
-	if (output == NULL)
-	{
-		return;
+	const float div = (1.0f / 32768.0f);
+	for (int i = 0; i < in_len; i++) {
+		input_float[i] = div * (float)samples[i];
 	}
 
-	if (_resampler != NULL)
-	{
-		int error = speex_resampler_process_int(_resampler, 0, samples, &in_len, output, &out_len);
-	}
-	else
-	{
-		memcpy(output, samples, out_len * 2);
+	struct resampler_data src_data = { 0 };
+	src_data.input_frames = frames;
+	src_data.ratio = resamp_ratio;
+	src_data.data_in = input_float;
+	src_data.data_out = output_float;
+	resampler_sinc_process(resample, &src_data);
+	int out_len = src_data.output_frames * 2 * sizeof(int16_t);
+
+	const float mul = (32768.0f);
+	for (int i = 0; i < out_len; i++) {
+		int32_t tmp = (int32_t)(mul * output_float[i]);
+		tmp = MAX(tmp, -32768); // CLIP < 32768
+		tmp = MIN(tmp, 32767);  // CLIP > 32767
+		output[i] = tmp;
 	}
 
-	int size = out_len * 2;
 	std::unique_lock<std::mutex> l(lock);
-	buffer_full.wait(l, [this, size]() {return size < fifo_write_avail(_fifo); });
+	buffer_full.wait(l, [this, out_len]() {return out_len < fifo_write_avail(_fifo); });
 
-	fifo_write(_fifo, output, size);
+	fifo_write(_fifo, output, out_len);
 
 	retro_time_t to_sleep_ms = (
 		(frame_limit_last_time + frame_limit_minimum_time)
