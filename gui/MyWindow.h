@@ -82,15 +82,6 @@ public:
 
 	LRESULT OnSelChanged(int idCtrl, LPNMHDR pnmh, BOOL& /*bHandled*/)
 	{
-		LPNMPROPERTYITEM pnpi = (LPNMPROPERTYITEM)pnmh;
-		if (pnpi->prop == NULL) return 0;
-		TCHAR szValue[100] = { 0 };
-		pnpi->prop->GetDisplayValue(szValue, sizeof(szValue) / sizeof(TCHAR));
-		CComVariant vValue;
-		pnpi->prop->GetValue(&vValue);
-		vValue.ChangeType(VT_BSTR);
-		ATLTRACE(_T("OnSelChanged - Ctrl: %d, Name: '%s', DispValue: '%s', Value: '%ls'\n"),
-			idCtrl, pnpi->prop->GetName(), szValue, vValue.bstrVal); idCtrl;
 		return 0;
 	}
 
@@ -132,8 +123,8 @@ public:
 				wstring str2 = (LPCTSTR)name;
 				if (lstrcmp(str.c_str(), str2.c_str()) == 0)
 				{
-					const char* str3 = vValue.boolVal ? "enabled" : "disabled";
-					strcpy(retro->variables[i].var,str3) ;
+					const char* check = vValue.boolVal ? "enabled" : "disabled";
+					strcpy(retro->variables[i].var,check) ;
 				}
 
 			}

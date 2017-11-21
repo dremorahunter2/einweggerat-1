@@ -873,8 +873,5 @@ void CLibretro::kill()
 	video_deinit();
 	g_retro.retro_unload_game();
 	g_retro.retro_deinit();
-
-	
-	//WindowsAudio::Close();
 }
 

@@ -2,6 +2,7 @@
 #include "../libretro.h"
 #include "glad.h"
 #include "gl_render.h"
+#include <math.h>
 
 video g_video;
 
@@ -250,13 +251,7 @@ void init_framebuffer(int width, int height)
 	glClear(GL_COLOR_BUFFER_BIT);
 
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
-
-	
-	
-
 }
-
 
 void resize_cb(int w, int h) {
 	static int last_w = 0;
@@ -272,32 +267,39 @@ void resize_cb(int w, int h) {
 		last_h = h;
 	}
 	
+	int screen_width = w;
+	int screen_height = h;
+	int virtual_width = g_video.tex_w;
+	int virtual_height = g_video.tex_h;
+	float desired_aspect = (float)virtual_width / (float)virtual_height;
+	float device_aspect = (float)w / (float)h;
+	int x = 0;
+	int y = 0;
 
-	int32_t vp_width = w;
-	int32_t vp_height = h;
-	//glViewport(0, 0, vp_width, vp_height);
-	// default to bottom left corner of the window above the status bar
-	int32_t vp_x = 0;
-	int32_t vp_y = 0;
 
-	int32_t hw = g_video.clip_h * vp_width;
-	int32_t wh = g_video.clip_w * vp_height;
+	float delta;
 
-	// add letterboxes or pillarboxes if the window has a different aspect ratio
-	// than the current display mode
-	if (hw > wh) {
-		int32_t w_max = wh / g_video.clip_h;
-		vp_x += (vp_width - w_max) / 2;
-		vp_width = w_max;
+	if (fabsf(device_aspect - desired_aspect) < 0.0001f)
+	{
+		/* If the aspect ratios of screen and desired aspect
+		* ratio are sufficiently equal (floating point stuff),
+		* assume they are actually equal.
+		*/
 	}
-	else if (hw < wh) {
-		int32_t h_max = hw / g_video.clip_w;
-		vp_y += (vp_height - h_max) / 2;
-		vp_height = h_max;
+	else if (device_aspect > desired_aspect)
+	{
+		delta = (desired_aspect / device_aspect - 1.0f) / 2.0f + 0.5f;
+		x = (int)roundf(screen_width * (0.5f - delta));
+		screen_width= (unsigned)roundf(2.0f * screen_width * delta);
+	}
+	else
+	{
+		delta = (device_aspect / desired_aspect - 1.0f) / 2.0f + 0.5f;
+		y = (int)roundf(screen_height * (0.5f - delta));
+		screen_height = (unsigned)roundf(2.0f * screen_height * delta);
 	}
 
-	// configure viewport
-	glViewport(vp_x, vp_y, vp_width, vp_height);
+	glViewport(x, y, screen_width, screen_height);
 }
 
 
@@ -385,7 +387,7 @@ void create_window(int width, int height, HWND hwnd) {
 	parameters.PresentationInterval = D3DPRESENT_INTERVAL_ONE;
 
 	d3d->CreateDeviceEx(D3DADAPTER_DEFAULT, D3DDEVTYPE_HAL, g_video.D3D_hwnd,
-		D3DCREATE_MIXED_VERTEXPROCESSING | D3DCREATE_MULTITHREADED,
+		D3DCREATE_MIXED_VERTEXPROCESSING | D3DCREATE_MULTITHREADED| D3DCREATE_FPU_PRESERVE,
 		&parameters, NULL, &g_video.D3D_device);
 	d3d->Release();
 	init_shaders();
@@ -445,6 +447,8 @@ BOOL CenterWindow(HWND hwndWindow)
 void video_configure(const struct retro_game_geometry *geom, HWND hwnd) {
 	int nwidth = 0, nheight = 0;
 	g_video.alloc_framebuf = false;
+
+	CenterWindow(hwnd);
 	resize_to_aspect(geom->aspect_ratio, geom->base_width * 1, geom->base_height * 1, &nwidth, &nheight);
 
 	nwidth *= 1;
@@ -461,7 +465,7 @@ void video_configure(const struct retro_game_geometry *geom, HWND hwnd) {
 
 	if (!g_video.pixfmt)
 		g_video.pixfmt = GL_UNSIGNED_SHORT_5_5_5_1;
-	CenterWindow(hwnd);
+	
 
 	
 
@@ -483,8 +487,8 @@ void video_configure(const struct retro_game_geometry *geom, HWND hwnd) {
 	g_video.D3D_device->GetBackBuffer(0, 0, D3DBACKBUFFER_TYPE_MONO, &g_video.D3D_backbuf);
 	AllocRenderTarget();
 	g_video.alloc_framebuf = true;
-	g_video.clip_w = 0;
-	g_video.clip_h =0;	
+	g_video.tex_w = 0;
+	g_video.tex_h =0;	
 }
 
 
@@ -523,10 +527,10 @@ void video_refresh(const void *data, unsigned width, unsigned height, unsigned p
 		g_video.pitch = pitch;
 		glPixelStorei(GL_UNPACK_ROW_LENGTH, g_video.pitch / g_video.bpp);
 	}
-	if (g_video.clip_w != width || g_video.clip_h != height)
+	if (g_video.tex_w != width || g_video.tex_h != height)
 	{
-		g_video.clip_h = height;
-		g_video.clip_w = width;
+		g_video.tex_h = height;
+		g_video.tex_w = width;
 		if (data && data != RETRO_HW_FRAME_BUFFER_VALID)
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8,width,height, 0,g_video.pixtype, g_video.pixfmt,data);
 
@@ -534,12 +538,16 @@ void video_refresh(const void *data, unsigned width, unsigned height, unsigned p
 	else
 	{
 		if (data && data != RETRO_HW_FRAME_BUFFER_VALID) {
-			glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, width, height,
-				g_video.pixtype, g_video.pixfmt, data);
+		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, width, height,g_video.pixtype, g_video.pixfmt, data);
 		}
 	}
+	g_video.tex_h = height;
+	g_video.tex_w = width;
 
-	resize_cb(clientRect.right, clientRect.bottom);
+	int32_t win_width = clientRect.right - clientRect.left;
+	int32_t win_height = clientRect.bottom - clientRect.top;
+
+	resize_cb(win_width, win_height);
 	
 
 	glClear(GL_COLOR_BUFFER_BIT);

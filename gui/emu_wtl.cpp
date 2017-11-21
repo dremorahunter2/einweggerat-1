@@ -142,21 +142,12 @@ int Run(LPTSTR cmdline = NULL, int nCmdShow = SW_SHOWDEFAULT)
 	{
 		if (!AttachConsole(ATTACH_PARENT_PROCESS))
 		{
-			AllocConsole();
-			AttachConsole(GetCurrentProcessId());
-			freopen("CONOUT$", "w", stdout);
-			cmdline::parser a;
-			a.add<string>("core_name", 'c', "core filename", true, "");
-			a.add<string>("rom_name", 'r', "rom filename", true, "");
-			a.add("pergame", 'g', "per-game configuration");
-			a.parse_check(argc, cmdargptr);
-		    BOOL set=false;
-			int nRet = theLoop.Run(dlgMain);
-			dlgMain.DestroyWindow();
+			CAboutDlg dlg;
+			dlg.DoModal();
 			_Module.RemoveMessageLoop();
 			LocalFree(cmdargptr);
 			ExitProcess(0);
-			return nRet;
+			return 0;
 		}
 		else
 		{
@@ -166,8 +157,7 @@ int Run(LPTSTR cmdline = NULL, int nCmdShow = SW_SHOWDEFAULT)
 			a.add<string>("rom_name", 'r', "rom filename", true, "");
 			a.add("pergame", 'g', "per-game configuration");
 			a.parse_check(argc, cmdargptr);
-			printf("Press any key to continue....\n");
-			dlgMain.DestroyWindow();
+			printf("\nPress any key to continue....\n");
 			_Module.RemoveMessageLoop();
 			LocalFree(cmdargptr);
 			ExitProcess(0);
