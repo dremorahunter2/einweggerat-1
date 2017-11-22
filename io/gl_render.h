@@ -14,15 +14,16 @@ typedef struct{
 
 	int glmajor;
 	int glminor;
+	int last_h;
+	int last_w;
+
 
 	GLuint blit_tex;
 	GLuint blit_fbo;
 
 	GLuint pitch;
-	GLuint tex_w, tex_h;
+	GLint tex_w, tex_h;
 	GLuint clip_w, clip_h;
-
-	float ratio;
 
 	GLuint pixfmt;
 	GLuint pixtype;
