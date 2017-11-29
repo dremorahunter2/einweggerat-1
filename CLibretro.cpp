@@ -160,7 +160,7 @@ void Audio::sleeplil()
 void Audio::mix(const int16_t* samples, size_t frames)
 {
 	uint32_t in_len = frames * 2;
-	double drc_ratio = resamp_original * 1.0 + skew * ((double)(fifo_write_avail(_fifo) - SAMPLE_COUNT_HALF) / SAMPLE_COUNT_HALF);
+	double drc_ratio = resamp_original * (1.0 + skew * ((double)(fifo_write_avail(_fifo) - SAMPLE_COUNT_HALF) / SAMPLE_COUNT_HALF));
 
 	const float div = (1.0f / 32768.0f);
 	for (int i = 0; i < in_len; i++) {
