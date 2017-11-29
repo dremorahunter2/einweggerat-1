@@ -3,6 +3,7 @@
 
 #include "dinput.h"
 #include "guid_container.h"
+#include <stdint.h>
 
 class Data_Reader;
 class Data_Writer;

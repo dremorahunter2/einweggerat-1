@@ -133,6 +133,7 @@ int Run(LPTSTR cmdline = NULL, int nCmdShow = SW_SHOWDEFAULT)
 	menu.Attach(LoadMenu( _Module.GetResourceInstance(), MAKEINTRESOURCE(MENU_MAINFRAME)));
 	dlgMain.SetMenu(menu);
 
+	menu.DestroyMenu();
 
 
 	int argc = 1;

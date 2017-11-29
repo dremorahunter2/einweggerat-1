@@ -13,6 +13,7 @@ using namespace std;
 using namespace utf8util;
 
 #define SAMPLE_COUNT 8192
+#define SAMPLE_COUNT_HALF SAMPLE_COUNT/2
 #define INLINE 
 
 static struct {
@@ -97,13 +98,13 @@ bool Audio::init(double refreshra)
 	}
 
 	client_rate = 44100;
-	resamp_ratio = resamp_original = (client_rate / system_rate);
+	resamp_original = (client_rate / system_rate);
 
 	output_float = new float[SAMPLE_COUNT * 4];
 	output = new int16_t[SAMPLE_COUNT * 4];
 	input_float = new float[SAMPLE_COUNT];
 
-	resample = resampler_sinc_init(resamp_ratio);
+	resample = resampler_sinc_init(resamp_original);
 	if (mal_context_init(NULL, 0, &context) != MAL_SUCCESS) {
 		printf("Failed to initialize context.");
 		return false;
@@ -141,15 +142,25 @@ void Audio::reset()
 #define MAX(x,y) ((x)>(y)) ? (x) : (y)
 #define MIN(x,y) ((x)<(y)) ? (x) : (y)
 
+
+void Audio::sleeplil()
+{
+	retro_time_t to_sleep_ms = ((frame_limit_last_time + frame_limit_minimum_time) - microseconds_now()) / 1000;
+	if (to_sleep_ms > 0)
+	{
+		float sleep_ms = (unsigned)to_sleep_ms;
+		/* Combat jitter a bit. */
+		frame_limit_last_time += frame_limit_minimum_time;
+		Sleep(sleep_ms);
+		return;
+	}
+	frame_limit_last_time = microseconds_now();
+}
+
 void Audio::mix(const int16_t* samples, size_t frames)
 {
 	uint32_t in_len = frames * 2;
-
-	int available = fifo_write_avail(_fifo);
-	int half = SAMPLE_COUNT / 2;
-	int delta_half = available - half;
-	double adjust = 1.0 + skew * ((double)delta_half / half);
-	resamp_ratio = resamp_original * adjust;
+	double drc_ratio = resamp_original * 1.0 + skew * ((double)(fifo_write_avail(_fifo) - SAMPLE_COUNT_HALF) / SAMPLE_COUNT_HALF);
 
 	const float div = (1.0f / 32768.0f);
 	for (int i = 0; i < in_len; i++) {
@@ -158,7 +169,7 @@ void Audio::mix(const int16_t* samples, size_t frames)
 
 	struct resampler_data src_data = { 0 };
 	src_data.input_frames = frames;
-	src_data.ratio = resamp_ratio;
+	src_data.ratio = drc_ratio;
 	src_data.data_in = input_float;
 	src_data.data_out = output_float;
 	resampler_sinc_process(resample, &src_data);
@@ -176,18 +187,6 @@ void Audio::mix(const int16_t* samples, size_t frames)
 	buffer_full.wait(l, [this, out_len]() {return out_len < fifo_write_avail(_fifo); });
 
 	fifo_write(_fifo, output, out_len);
-
-	retro_time_t to_sleep_ms = ((frame_limit_last_time + frame_limit_minimum_time)- microseconds_now()) / 1000;
-
-	if (to_sleep_ms > 0)
-	{
-		float sleep_ms = (unsigned)to_sleep_ms;
-		/* Combat jitter a bit. */
-		frame_limit_last_time += frame_limit_minimum_time;
-		Sleep(sleep_ms);
-		return;
-	}
-	frame_limit_last_time = microseconds_now();
 }
 
 static void core_unload() {
@@ -835,14 +834,9 @@ void CLibretro::run()
 		glClearColor(0, 0, 0, 1);
 		glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
 		_samplesCount = 0;
-		if (!paused)
-		{
-			while(!_samplesCount)
-			{
-				g_retro.retro_run();
-			}
-		}
-	    _audio.mix(_samples, _samplesCount/2);
+		if (!paused)g_retro.retro_run();
+	    if(_samplesCount)_audio.mix(_samples, _samplesCount/2);
+		_audio.sleeplil();
 
 			// Measure speed
 			double currentTime = milliseconds_now()/1000;

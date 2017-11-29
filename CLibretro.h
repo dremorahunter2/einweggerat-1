@@ -36,6 +36,7 @@ extern "C" {
 	bool init(double refreshra);
 	void destroy();
 	void reset();
+	void sleeplil();
 	void mix(const int16_t* samples, size_t sample_count);
 	mal_uint32 fill_buffer(uint8_t* pSamples, mal_uint32 samplecount);
 	mal_context context;
@@ -46,7 +47,6 @@ extern "C" {
 	double system_fps;
 	double skew;
 	double system_rate;
-	double resamp_ratio;
 	double resamp_original;
 	void* resample;
 	float *input_float;
