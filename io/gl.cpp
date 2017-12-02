@@ -614,6 +614,7 @@ void video_refresh(const void *data, unsigned width, unsigned height, unsigned p
 	switch (res) {
 	case D3DERR_DEVICELOST:
 	case D3DERR_DEVICEHUNG:
+		DeallocRenderTarget();
 		D3DPRESENT_PARAMETERS parameters = {};
 		parameters.BackBufferCount = 2; // D3DPRESENT_FORCEIMMEDIATE|D3DPRESENT_DONOTWAIT doesn't work without this
 		parameters.SwapEffect = D3DSWAPEFFECT_FLIPEX;
@@ -624,7 +625,7 @@ void video_refresh(const void *data, unsigned width, unsigned height, unsigned p
 		//anything opting in to Direct3D vsync is clearly a high-performance program, and thus wants the increased precision
 		parameters.PresentationInterval = D3DPRESENT_INTERVAL_ONE;
 		g_video.D3D_device->ResetEx(&parameters, NULL);
-		DeallocRenderTarget();
+	
 		AllocRenderTarget();
 		return;
 	}
