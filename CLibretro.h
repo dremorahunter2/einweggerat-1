@@ -51,7 +51,6 @@ extern "C" {
 	void* resample;
 	float *input_float;
 	float *output_float;
-	int16_t* output;
 
 	std::mutex lock;
 	std::condition_variable buffer_full;

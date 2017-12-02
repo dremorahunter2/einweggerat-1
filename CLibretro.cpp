@@ -12,8 +12,7 @@
 using namespace std;
 using namespace utf8util;
 
-#define SAMPLE_COUNT 8192
-#define SAMPLE_COUNT_HALF SAMPLE_COUNT/2
+#define SAMPLE_COUNT (8192 * 2)
 #define INLINE 
 
 static struct {
@@ -36,11 +35,11 @@ static struct {
 	void(*retro_unload_game)(void);
 } g_retro;
 
-static mal_uint32 sdl_audio_callback(mal_device* pDevice, mal_uint32 frameCount, void* pSamples)
+static mal_uint32 audio_callback(mal_device* pDevice, mal_uint32 frameCount, void* pSamples)
 {
 	//convert from samples to the actual number of bytes.
-	int count_bytes = frameCount * pDevice->channels * mal_get_sample_size_in_bytes(mal_format_s16);
-	int ret = ((Audio*)pDevice->pUserData)->fill_buffer((uint8_t*)pSamples, count_bytes) / mal_get_sample_size_in_bytes(mal_format_s16);
+	int count_bytes = frameCount * pDevice->channels * mal_get_sample_size_in_bytes(mal_format_f32);
+	int ret = ((Audio*)pDevice->pUserData)->fill_buffer((uint8_t*)pSamples, count_bytes) / mal_get_sample_size_in_bytes(mal_format_f32);
 	return ret / pDevice->channels;
 	//...and back to samples
 }
@@ -101,15 +100,14 @@ bool Audio::init(double refreshra)
 	resamp_original = (client_rate / system_rate);
 
 	output_float = new float[SAMPLE_COUNT * 4];
-	output = new int16_t[SAMPLE_COUNT * 4];
 	input_float = new float[SAMPLE_COUNT];
 
 	resample = resampler_sinc_init(resamp_original);
-	if (mal_context_init(NULL, 0, &context) != MAL_SUCCESS) {
+	if (mal_context_init(NULL, 0, NULL, &context) != MAL_SUCCESS) {
 		printf("Failed to initialize context.");
 		return false;
 	}
-	mal_device_config config = mal_device_config_init_playback(mal_format_s16, 2, client_rate, sdl_audio_callback);
+	mal_device_config config = mal_device_config_init_playback(mal_format_f32, 2, client_rate, audio_callback);
 	config.bufferSizeInFrames = 1024;
 	_fifo = fifo_new(SAMPLE_COUNT);
 	if (mal_device_init(&context, mal_device_type_playback, NULL, &config, this, &device) != MAL_SUCCESS) {
@@ -128,7 +126,6 @@ void Audio::destroy()
 		mal_device_stop(&device);
 		mal_context_uninit(&context);
 		delete[] input_float;
-		delete[] output;
 		delete[] output_float;
 		resampler_sinc_free(resample);
 	}
@@ -160,12 +157,9 @@ void Audio::sleeplil()
 void Audio::mix(const int16_t* samples, size_t frames)
 {
 	uint32_t in_len = frames * 2;
-	double drc_ratio = resamp_original * (1.0 + skew * ((double)(fifo_write_avail(_fifo) - SAMPLE_COUNT_HALF) / SAMPLE_COUNT_HALF));
-
-	const float div = (1.0f / 32768.0f);
-	for (int i = 0; i < in_len; i++) {
-		input_float[i] = div * (float)samples[i];
-	}
+	int available = fifo_write_avail(_fifo);
+	double drc_ratio = resamp_original *  (1.0 + skew * ((double)(available - SAMPLE_COUNT * 2) / SAMPLE_COUNT));
+	mal_pcm_s16_to_f32(input_float, samples, in_len);
 
 	struct resampler_data src_data = { 0 };
 	src_data.input_frames = frames;
@@ -173,20 +167,12 @@ void Audio::mix(const int16_t* samples, size_t frames)
 	src_data.data_in = input_float;
 	src_data.data_out = output_float;
 	resampler_sinc_process(resample, &src_data);
-	int out_len = src_data.output_frames * 2 * sizeof(int16_t);
-
-	const float mul = (32768.0f);
-	for (int i = 0; i < out_len; i++) {
-		int32_t tmp = (int32_t)(mul * output_float[i]);
-		tmp = MAX(tmp, -32768); // CLIP < 32768
-		tmp = MIN(tmp, 32767);  // CLIP > 32767
-		output[i] = tmp;
-	}
+	int out_len = src_data.output_frames * 2 * sizeof(float);
 
 	std::unique_lock<std::mutex> l(lock);
 	buffer_full.wait(l, [this, out_len]() {return out_len < fifo_write_avail(_fifo); });
 
-	fifo_write(_fifo, output, out_len);
+	fifo_write(_fifo, output_float, out_len);
 }
 
 static void core_unload() {
