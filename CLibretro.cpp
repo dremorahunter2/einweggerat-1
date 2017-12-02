@@ -13,6 +13,7 @@ using namespace std;
 using namespace utf8util;
 
 #define SAMPLE_COUNT (8192 * 2)
+#define SAMPLE_COUNT_HALF SAMPLE_COUNT/2
 #define INLINE 
 
 static struct {
@@ -108,7 +109,7 @@ bool Audio::init(double refreshra)
 		return false;
 	}
 	mal_device_config config = mal_device_config_init_playback(mal_format_f32, 2, client_rate, audio_callback);
-	config.bufferSizeInFrames = 1024;
+	config.bufferSizeInFrames = 2048;
 	_fifo = fifo_new(SAMPLE_COUNT);
 	if (mal_device_init(&context, mal_device_type_playback, NULL, &config, this, &device) != MAL_SUCCESS) {
 		mal_context_uninit(&context);
@@ -136,10 +137,6 @@ void Audio::reset()
 }
 
 
-#define MAX(x,y) ((x)>(y)) ? (x) : (y)
-#define MIN(x,y) ((x)<(y)) ? (x) : (y)
-
-
 void Audio::sleeplil()
 {
 	retro_time_t to_sleep_ms = ((frame_limit_last_time + frame_limit_minimum_time) - microseconds_now()) / 1000;
@@ -158,7 +155,7 @@ void Audio::mix(const int16_t* samples, size_t frames)
 {
 	uint32_t in_len = frames * 2;
 	int available = fifo_write_avail(_fifo);
-	double drc_ratio = resamp_original *  (1.0 + skew * ((double)(available - SAMPLE_COUNT * 2) / SAMPLE_COUNT));
+	double drc_ratio = resamp_original *  (1.0 + skew * ((double)(available - SAMPLE_COUNT_HALF) / SAMPLE_COUNT_HALF));
 	mal_pcm_s16_to_f32(input_float, samples, in_len);
 
 	struct resampler_data src_data = { 0 };

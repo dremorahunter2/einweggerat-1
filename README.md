@@ -10,7 +10,7 @@ Has:
 * Dynamic rate control
 * Frame throttling
 * DirectInput/Xinput support
-* DirectSound audio output
+* DirectSound/WASAPI/WinMM audio output
 
 It intentionally does not have features like:
 * Video recording
