@@ -28,7 +28,6 @@ typedef struct{
 	GLuint pixfmt;
 	GLuint pixtype;
 	GLuint bpp;
-
 	HDC   hDC;
 	HGLRC hRC;
 	HWND gl_hwnd;

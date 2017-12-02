@@ -440,6 +440,7 @@ void create_window(int width, int height, HWND hwnd) {
 	g_video.last_w = 0;
 	g_video.last_h = 0;
 	g_win = true;
+
 }
 
 
@@ -613,6 +614,16 @@ void video_refresh(const void *data, unsigned width, unsigned height, unsigned p
 	switch (res) {
 	case D3DERR_DEVICELOST:
 	case D3DERR_DEVICEHUNG:
+		D3DPRESENT_PARAMETERS parameters = {};
+		parameters.BackBufferCount = 2; // D3DPRESENT_FORCEIMMEDIATE|D3DPRESENT_DONOTWAIT doesn't work without this
+		parameters.SwapEffect = D3DSWAPEFFECT_FLIPEX;
+		parameters.hDeviceWindow = g_video.D3D_hwnd;
+		parameters.Windowed = TRUE;
+		//https://msdn.microsoft.com/en-us/library/windows/desktop/bb172585(v=vs.85).aspx
+		//_ONE is _DEFAULT, but also calls timeBeginPeriod to improve precision
+		//anything opting in to Direct3D vsync is clearly a high-performance program, and thus wants the increased precision
+		parameters.PresentationInterval = D3DPRESENT_INTERVAL_ONE;
+		g_video.D3D_device->ResetEx(&parameters, NULL);
 		DeallocRenderTarget();
 		AllocRenderTarget();
 		return;
