@@ -6,10 +6,13 @@ A libretro debugging tool.
 
 Well, its meant to be. Needed something like this for ages.
 
+Requires Windows Vista SP1.
+
 Has:
 * Dynamic rate control
 * Frame throttling
-* DirectInput/Xinput support
+* OpenGL/Direct3D9 interop based rendering
+* DirectInput/Xinput input
 * DirectSound/WASAPI/WinMM audio output
 
 It intentionally does not have features like:
