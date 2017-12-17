@@ -16,4 +16,4 @@
  let me know. Only a braindead dick would not do that, and not send some compensation (money/Steam games/whatever) my way.
  
  3. Code is provided with no warranty. Using somebody else's code and bitching when it goes wrong makes 
- you a fucking dick. Fix the problem yourself. A non-dick would submit the fix back or submit a [bug report](https://www.chiark.greenend.org.uk/~sgtatham/bugs.html)
+ you a fucking dick. Fix the problem yourself. A non-dick would submit the fix back or submit a decent [bug report](https://www.chiark.greenend.org.uk/~sgtatham/bugs.html). I have no patience for people who cannot even do that shit right.
