@@ -10,15 +10,10 @@
 
  1. Do whatever you like with the original work, just don't be a dick.
 
-     Being a dick includes - but is not limited to - the following instances:
+     Being a utter dick includes - but is not limited to - the following instances: outright copyright infringement, selling the original      work with no real work done to it to make a quick buck (especially for some app store) & modding the original work for malware.
 
-	 1a. Outright copyright infringement - Don't just copy this and change the name. 
-	 1b. Selling the unmodified original with no real work work done what-so-ever, that's REALLY being a dick.
-	     Especially if you mod it just enough to work on some shitty app store.  
-	 1c. Modifying the original work to contain hidden harmful content like viruses and ads. That would make you a PROPER dick.  
-
- 2. If you become rich through decent modifications, related works/services, or supporting the original work,
- share the love. Only a dick would make loads off this work and not give the original work's creator(s) a game on Steam. 
+ 2. If you become rich through decent/considerable modifications, related works/services, or supporting the original work,
+ let me know. Only a braindead dick would not do that, and send some compensation (money/Steam games/whatever) my way.
  
  3. Code is provided with no warranty. Using somebody else's code and bitching when it goes wrong makes 
- you a DONKEY dick. Fix the problem yourself. A non-dick would submit the fix back or submit a [bug report](https://www.chiark.greenend.org.uk/~sgtatham/bugs.html)
+ you a fucking dick. Fix the problem yourself. A non-dick would submit the fix back or submit a [bug report](https://www.chiark.greenend.org.uk/~sgtatham/bugs.html)
