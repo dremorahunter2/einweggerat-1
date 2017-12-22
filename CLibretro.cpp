@@ -12,8 +12,7 @@
 using namespace std;
 using namespace utf8util;
 
-#define SAMPLE_COUNT (8192 * 2)
-#define SAMPLE_COUNT_HALF SAMPLE_COUNT/2
+#define SAMPLE_COUNT (1024 * 12)
 #define INLINE 
 
 static struct {
@@ -155,7 +154,7 @@ void Audio::mix(const int16_t* samples, size_t frames)
 {
 	uint32_t in_len = frames * 2;
 	int available = fifo_write_avail(_fifo);
-	double drc_ratio = resamp_original *  (1.0 + skew * ((double)(available - SAMPLE_COUNT_HALF) / SAMPLE_COUNT_HALF));
+	double drc_ratio = resamp_original *  (1.0 + skew * ((double)(available - SAMPLE_COUNT * 2) / SAMPLE_COUNT));
 	mal_pcm_s16_to_f32(input_float, samples, in_len);
 
 	struct resampler_data src_data = { 0 };

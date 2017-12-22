@@ -322,8 +322,7 @@ public:
 			unsigned retro_id;
 			TCHAR description[64] = { 0 };
 			bl->get(n, e, action,description,retro_id);
-			remove_from_list(assign, n);
-			add_to_list(assign, last_event, action, n,description);
+			add_to_list(assign, last_event, action, n,description,true);
 			bl->replace(n, last_event, action,description,retro_id);
 			
 		}
@@ -572,7 +571,7 @@ private:
 		return false;
 	}
 
-	void add_to_list(HWND w, const dinput::di_event & e, unsigned action, int item2,TCHAR* description)
+	void add_to_list(HWND w, const dinput::di_event & e, unsigned action, int item2,TCHAR* description, BOOL replace = false)
 	{
 		std::tstring str;
 		{
@@ -585,13 +584,21 @@ private:
 		lvi.mask = LVIF_TEXT;
 		lvi.iItem = item2;
 		lvi.pszText = (TCHAR *)str.c_str();
-		int item = ListView_InsertItem(w, &lvi);
-		if (item != -1)
+		if (!replace)
 		{
-			lvi.iSubItem = 1;
-			lvi.pszText = (TCHAR *)description;
-			SendMessage(w, LVM_SETITEMTEXT, (WPARAM)item, (LPARAM)(LVITEM *)& lvi);
+			int item = ListView_InsertItem(w, &lvi);
+			if (item != -1)
+			{
+				lvi.iSubItem = 1;
+				lvi.pszText = (TCHAR *)description;
+				SendMessage(w, LVM_SETITEMTEXT, (WPARAM)item, (LPARAM)(LVITEM *)& lvi);
+			}
 		}
+		else
+		{
+			ListView_SetItem(w, &lvi);
+		}
+	
 	}
 
 	void remove_from_list(HWND w, unsigned n)
