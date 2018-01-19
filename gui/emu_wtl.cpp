@@ -7,7 +7,7 @@
 #include <stdio.h>
 #include <fcntl.h>
 #include <io.h>
-#include "../cmdline.h"
+#include "cmdline.h"
 #include <iostream>
 #include <string>
 #include <sstream>

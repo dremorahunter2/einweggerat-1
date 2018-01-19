@@ -1,5 +1,5 @@
 #include <windows.h>
-#include "../libretro.h"
+#include "libretro.h"
 #include "glad.h"
 #include "gl_render.h"
 

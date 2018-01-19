@@ -40,7 +40,7 @@
     <ClCompile Include="libretro-common-master\memmap\memalign.c">
       <Filter>io</Filter>
     </ClCompile>
-    <ClCompile Include="io\audio\resampler.c">
+    <ClCompile Include="3rdparty\resampler.c">
       <Filter>io</Filter>
     </ClCompile>
   </ItemGroup>

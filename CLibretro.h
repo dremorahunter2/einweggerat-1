@@ -6,11 +6,14 @@
 #include <chrono>
 #include <mutex>
 #include <condition_variable>
-#include <audio/audio_resampler.h>
+#include "libretro-common-master/include/audio/audio_resampler.h"
 #include "io/input.h"
-#include "io/audio/mini_al.h"
+#include "mini_al.h"
 #include "libretro-common-master/include/queues/fifo_queue.h"
 #include "libretro-common-master/include/rthreads/rthreads.h"
+
+
+
 
 namespace std
 {

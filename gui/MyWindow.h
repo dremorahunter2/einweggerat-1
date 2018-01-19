@@ -11,10 +11,10 @@
 #include <string>
 #include <sstream>
 #include <iomanip>
-#include "../ini.h"
-#include "../libretro.h"
+#include "ini.h"
+#include "libretro.h"
 #include <shlwapi.h>
-#include "../cmdline.h"
+#include "cmdline.h"
 #pragma comment(lib, "shlwapi.lib")
 using namespace std;
 using namespace utf8util;

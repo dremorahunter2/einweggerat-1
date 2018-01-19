@@ -75,7 +75,7 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
-    <IncludePath>C:\codecrack\wtl\Include;C:\codecrack\code\libretro_loader\libretro-common-master\include;$(IncludePath)</IncludePath>
+    <IncludePath>C:\codecrack\wtl\Include;$(ProjectDir)\3rdparty\libretro-common\include;$(ProjectDir)\3rdparty;$(IncludePath)</IncludePath>
     <PreBuildEventUseInBuild>true</PreBuildEventUseInBuild>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -86,7 +86,7 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
-    <IncludePath>C:\codecrack\wtl\Include;C:\codecrack\code\libretro_loader\libretro-common-master\include;$(IncludePath)</IncludePath>
+    <IncludePath>C:\codecrack\wtl\Include;$(ProjectDir)\3rdparty\libretro-common\include;$(ProjectDir)\3rdparty;$(IncludePath)</IncludePath>
     <LibraryPath>$(LibraryPath)</LibraryPath>
     <PreBuildEventUseInBuild>true</PreBuildEventUseInBuild>
   </PropertyGroup>
@@ -227,6 +227,7 @@
     <ClInclude Include="targetver.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="3rdparty\resampler.c" />
     <ClCompile Include="CLibretro.cpp" />
     <ClCompile Include="gui\emu_wtl.cpp">
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">..\StdAfx.h</PrecompiledHeaderFile>
@@ -235,7 +236,6 @@
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|x64'">..\StdAfx.h</PrecompiledHeaderFile>
     </ClCompile>
     <ClCompile Include="io\abstract_file.cpp" />
-    <ClCompile Include="io\audio\resampler.c" />
     <ClCompile Include="io\bind_list.cpp" />
     <ClCompile Include="io\blargg_common.cpp" />
     <ClCompile Include="io\blargg_errors.cpp" />
