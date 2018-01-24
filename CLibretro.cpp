@@ -222,8 +222,7 @@ bool core_environment(unsigned cmd, void *data) {
 				struct retro_input_descriptor *var = (struct retro_input_descriptor *)data;
 				static int i = 0;
 				while (var != NULL && var->port == 0){
-				var++;
-				i++;
+				var++;i++;
 				}
 				if (i != input_device->bl->get_count())
 				{
@@ -268,9 +267,7 @@ bool core_environment(unsigned cmd, void *data) {
 				{
 					input_device->bl->add(keyboard, i, str.GetBuffer(NULL), id);
 				}
-				
-				i++;
-				++var;
+				i++;++var;
 			}
 			Std_File_Writer_u out2;
 			if (!out2.open(retro->inputcfg_path))
@@ -279,8 +276,6 @@ bool core_environment(unsigned cmd, void *data) {
 				out2.close();
 			}
 		}
-
-		
 		return true;
 	}
 	break;
@@ -525,7 +520,6 @@ bool CLibretro::core_load(TCHAR *sofile,bool gamespecificoptions, TCHAR* filenam
 		PathAppend(corevar_path, filez);
 		lstrcat(inputcfg_path, L"_input.cfg");
 		lstrcat(corevar_path, L".ini");
-
 	}
 	else
 	{
@@ -537,7 +531,6 @@ bool CLibretro::core_load(TCHAR *sofile,bool gamespecificoptions, TCHAR* filenam
 		lstrcat(inputcfg_path, L"_input.cfg");
 		lstrcat(corevar_path, L".ini");
 	}
-
 	//set libretro func pointers
 	set_environment(core_environment);
 	set_video_refresh(core_video_refresh);
@@ -630,7 +623,6 @@ bool CLibretro::loadfile(TCHAR* filename, TCHAR* core_filename,bool gamespecific
 			printf("FAILED TO LOAD ROMz!!!!!!!!!!!!!!!!!!");
 			return false;
 		}
-		
 		// Get the filesize
 		fseek(Input, 0, SEEK_END);
 		int Size = ftell(Input);
@@ -669,7 +661,6 @@ bool CLibretro::loadfile(TCHAR* filename, TCHAR* core_filename,bool gamespecific
 	isEmulating = true;
 	lastTime = milliseconds_now()/1000;
     nbFrames = 0;
-
 	return true;
 }
 
@@ -699,7 +690,6 @@ void CLibretro::run()
 		if (!paused)g_retro.retro_run();
 	    if(_samplesCount)_audio.mix(_samples, _samplesCount/2);
 		_audio.sleeplil();
-
 		// Measure speed
 		double currentTime = milliseconds_now()/1000;
 		nbFrames++;

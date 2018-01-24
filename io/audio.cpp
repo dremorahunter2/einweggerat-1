@@ -12,7 +12,6 @@ static mal_uint32 audio_callback(mal_device* pDevice, mal_uint32 frameCount, voi
 static retro_time_t frame_limit_minimum_time = 0.0;
 static retro_time_t frame_limit_last_time = 0.0;
 
-
 long long milliseconds_now() {
 	static LARGE_INTEGER s_frequency;
 	static BOOL s_use_qpc = QueryPerformanceFrequency(&s_frequency);
@@ -71,7 +70,6 @@ bool Audio::init(double refreshra, retro_system_av_info av)
 	mal_device_start(&device);
 	frame_limit_last_time = microseconds_now();
 	frame_limit_minimum_time = (retro_time_t)roundf(1000000.0f / (av.timing.fps));
-
 	return true;
 }
 void Audio::destroy()
@@ -86,7 +84,6 @@ void Audio::destroy()
 }
 void Audio::reset()
 {
-
 }
 
 

@@ -1,6 +1,6 @@
-# einweggerat
+# einweggerät
 
-![shaderlathe](http://mudlord.info/blog/wp-content/uploads/2017/10/6.png)
+![einweggerät](https://rebote.net/linkage/einweg1.PNG)
 
 A libretro debugging tool.
 
@@ -21,5 +21,5 @@ It intentionally does not have features like:
 * Post processing shaders
 * Rewind
 
-![shaderlathe](http://mudlord.info/blog/wp-content/uploads/2017/10/2.png)
-![shaderlathe](http://mudlord.info/blog/wp-content/uploads/2017/10/3.png)
+![einweggerät](https://rebote.net/linkage/einweg2.PNG)
+![einweggerät](https://rebote.net/linkage/einweg3.PNG)
