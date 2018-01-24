@@ -23,7 +23,8 @@ typedef struct{
 
 	GLuint pitch;
 	GLint tex_w, tex_h;
-	GLuint clip_w, clip_h;
+	GLuint base_w, base_h;
+	float aspect;
 
 	GLuint pixfmt;
 	GLuint pixtype;

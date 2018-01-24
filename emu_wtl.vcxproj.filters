@@ -34,13 +34,16 @@
     <ClCompile Include="io\Data_Reader.cpp">
       <Filter>io</Filter>
     </ClCompile>
-    <ClCompile Include="libretro-common-master\queues\fifo_queue.c">
-      <Filter>io</Filter>
-    </ClCompile>
-    <ClCompile Include="libretro-common-master\memmap\memalign.c">
-      <Filter>io</Filter>
-    </ClCompile>
     <ClCompile Include="3rdparty\resampler.c">
+      <Filter>io</Filter>
+    </ClCompile>
+    <ClCompile Include="3rdparty\libretro-common\queues\fifo_queue.c">
+      <Filter>io</Filter>
+    </ClCompile>
+    <ClCompile Include="3rdparty\libretro-common\memmap\memalign.c">
+      <Filter>io</Filter>
+    </ClCompile>
+    <ClCompile Include="io\audio.cpp">
       <Filter>io</Filter>
     </ClCompile>
   </ItemGroup>
@@ -88,6 +91,9 @@
       <Filter>io</Filter>
     </ClInclude>
     <ClInclude Include="io\Data_Reader.h">
+      <Filter>io</Filter>
+    </ClInclude>
+    <ClInclude Include="io\audio.h">
       <Filter>io</Filter>
     </ClInclude>
   </ItemGroup>

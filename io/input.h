@@ -56,7 +56,7 @@ public:
 
 	void set_paused( bool );
 
-	void reset();
+	void clear_binds();
 
 	void set_focus( bool is_focused );
 

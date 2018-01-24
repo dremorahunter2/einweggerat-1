@@ -5,12 +5,11 @@
 #include <thread>
 #include <chrono>
 #include <mutex>
-#include <condition_variable>
-#include "libretro-common-master/include/audio/audio_resampler.h"
+
+
 #include "io/input.h"
-#include "mini_al.h"
-#include "libretro-common-master/include/queues/fifo_queue.h"
-#include "libretro-common-master/include/rthreads/rthreads.h"
+#include "io/audio.h"
+
 
 
 
@@ -22,40 +21,7 @@ namespace std
 	typedef wostringstream tostringstream;
 }
 
-#ifdef __cplusplus
-extern "C" {
-#endif
 
-	void *resampler_sinc_init(double bandwidth_mod);
-	void resampler_sinc_process(void *re_, struct resampler_data *data);
-	void resampler_sinc_free(void *re_);
-
-	class Audio
-	{
-	
-	public:
-	bool init(double refreshra);
-	void destroy();
-	void reset();
-	void sleeplil();
-	void mix(const int16_t* samples, size_t sample_count);
-	mal_uint32 fill_buffer(uint8_t* pSamples, mal_uint32 samplecount);
-	mal_context context;
-	mal_device device;
-	unsigned client_rate;
-	fifo_buffer* _fifo;
-	float fps;
-	double system_fps;
-	double skew;
-	double system_rate;
-	double resamp_original;
-	void* resample;
-	float *input_float;
-	float *output_float;
-
-	std::mutex lock;
-	std::condition_variable buffer_full;
-	};
 
 class CLibretro
 {
@@ -107,8 +73,5 @@ public:
     int nbFrames;
 };
 
-#ifdef __cplusplus
-}
-#endif
 
 #endif CEMULATOR_H

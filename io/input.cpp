@@ -155,11 +155,6 @@ input::~input()
 		return ret;
 	}
 
-	void input::reset()
-	{
-		bl->reset();
-	}
-
 	void input::set_speed( int speed )
 	{
 		bl->set_speed( speed );

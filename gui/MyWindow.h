@@ -816,7 +816,8 @@ public:
 				DestroyWindow();
 				return;
 			}
-			emulator->loadfile(rom_filename, core_filename, specifics);
+			if (!emulator->loadfile(rom_filename, core_filename, specifics))
+				DestroyWindow();
 		}
 
 		void ProcessFile(LPCTSTR lpszPath)

@@ -2,7 +2,7 @@
 #include "libretro.h"
 #include "glad.h"
 #include "gl_render.h"
-
+#include <math.h>
 video g_video;
 
 static const PIXELFORMATDESCRIPTOR pfd =
@@ -220,8 +220,8 @@ static Direct3DCreate9Ex_t lpDirect3DCreate9Ex;
 
 void refresh_vertex_data() {
 
-	float bottom = (float)g_video.clip_h / g_video.tex_h;
-	float right = (float)g_video.clip_w / g_video.tex_w;
+	float bottom = (float)g_video.base_h / g_video.tex_h;
+	float right = (float)g_video.base_w / g_video.tex_w;
 
 
 	typedef struct
@@ -243,7 +243,6 @@ void refresh_vertex_data() {
 
 
 	glBindVertexArray(g_shader.vao);
-
 	glBindBuffer(GL_ARRAY_BUFFER, g_shader.vbo);
 	glBufferData(GL_ARRAY_BUFFER, sizeof(vertex_data) * 4, vert, GL_STATIC_DRAW);
 	glEnableVertexAttribArray(g_shader.i_pos);
@@ -297,15 +296,11 @@ void init_framebuffer(int width, int height)
 	g_video.D3D_sharehandle = wglDXOpenDeviceNV(g_video.D3D_device);
 	g_video.D3D_device->GetBackBuffer(0, 0, D3DBACKBUFFER_TYPE_MONO, &g_video.D3D_backbuf);
 
-
-
 	AllocRenderTarget();
 
 	g_video.alloc_framebuf = true;
-
 }
-
-
+#define MIN(x, y) (((x) < (y)) ? (x) : (y))
 void resize_cb(int w, int h) {
 
 	if (g_video.alloc_framebuf)
@@ -314,37 +309,29 @@ void resize_cb(int w, int h) {
 		{
 			DeallocRenderTarget();
 			AllocRenderTarget();
+			refresh_vertex_data();
 		}
 		g_video.last_w = w;
 		g_video.last_h = h;
 	}
-
-
-	int32_t vp_width = w;
-	int32_t vp_height = h;
-	//glViewport(0, 0, vp_width, vp_height);
-	// default to bottom left corner of the window above the status bar
-	int32_t vp_x = 0;
-	int32_t vp_y = 0;
-
-	int32_t hw = g_video.tex_h * vp_width;
-	int32_t wh = g_video.tex_w * vp_height;
-
-	// add letterboxes or pillarboxes if the window has a different aspect ratio
-	// than the current display mode
-	if (hw > wh) {
-		int32_t w_max = wh / g_video.tex_h;
-		vp_x += (vp_width - w_max) / 2;
-		vp_width = w_max;
-	}
-	else if (hw < wh) {
-		int32_t h_max = hw / g_video.tex_w;
-		vp_y += (vp_height - h_max) / 2;
-		vp_height = h_max;
-	}
-
-	// configure viewport
-	glViewport(vp_x, vp_y, vp_width, vp_height);
+	double renderwidth = (double)g_video.base_w;
+	double renderheight = (double)g_video.base_h;
+	double current_aspect = renderwidth / renderheight;
+	if (current_aspect > g_video.aspect)
+		renderwidth = (renderheight*g_video.aspect);
+	else if (current_aspect < g_video.aspect)
+		renderheight = (renderwidth / g_video.aspect);
+	double vp_x = (double)w / renderwidth;
+	double vp_y = (double)h / renderheight;
+	double render_scale = MIN(vp_x,vp_y);
+	RECT rect;
+	rect.right = (int32_t)(renderwidth * render_scale);
+	rect.bottom = (int32_t)(renderheight * render_scale);
+	rect.left = (w - rect.right) / 2;
+	rect.top = (h - rect.bottom) / 2;
+	rect.right += rect.left;
+	rect.bottom += rect.top;
+	glViewport(rect.left, g_video.last_h - rect.bottom, rect.right - rect.left, rect.bottom - rect.top);
 }
 
 
@@ -532,8 +519,9 @@ void video_configure(const struct retro_game_geometry *geom, HWND hwnd) {
 
 	g_video.tex_w = geom->max_width;
 	g_video.tex_h = geom->max_height;
-	g_video.clip_w = geom->base_width;
-	g_video.clip_h = geom->base_height;
+	g_video.base_w = geom->base_width;
+	g_video.base_h = geom->base_height;
+	g_video.aspect = geom->aspect_ratio;
 
 	refresh_vertex_data();
 
@@ -566,18 +554,20 @@ bool video_set_pixel_format(unsigned format) {
 }
 
 
+
 void video_refresh(const void *data, unsigned width, unsigned height, unsigned pitch) {
-	if (g_video.clip_w != width || g_video.clip_h != height)
-	{
-		g_video.clip_h = height;
-		g_video.clip_w = width;
-		refresh_vertex_data();
-	}
+	
 	glBindFramebuffer(GL_FRAMEBUFFER, g_video.blit_fbo);
 
-
-	RECT clientRect;
+	RECT clientRect, displayrect;
 	GetClientRect(g_video.D3D_hwnd, &clientRect);
+	if (g_video.base_w != width || g_video.base_h != height)
+	{
+		g_video.base_h = height;
+		g_video.base_w = width;
+		refresh_vertex_data();
+	}
+
 	resize_cb(clientRect.right, clientRect.bottom);
 
 	glBindTexture(GL_TEXTURE_2D, g_video.tex_id);

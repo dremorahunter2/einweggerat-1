@@ -228,10 +228,9 @@ public:
 		unlock();
 	}
 
-	virtual const char * load( Data_Reader & in )
+	virtual const char* load( Data_Reader & in )
 	{
 		const char * err = "Invalid input config file";
-
 		lock();
 			clear();
 			reset();
