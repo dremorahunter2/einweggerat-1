@@ -32,7 +32,6 @@ typedef struct{
 	HDC   hDC;
 	HGLRC hRC;
 	HWND gl_hwnd;
-	bool alloc_framebuf;
 	HWND window_hwnd;
 	struct retro_hw_render_callback hw;
 

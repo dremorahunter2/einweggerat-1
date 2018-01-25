@@ -292,27 +292,16 @@ void init_framebuffer(int width, int height)
 	glClear(GL_COLOR_BUFFER_BIT);
 
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
-	g_video.D3D_sharehandle = wglDXOpenDeviceNV(g_video.D3D_device);
-	g_video.D3D_device->GetBackBuffer(0, 0, D3DBACKBUFFER_TYPE_MONO, &g_video.D3D_backbuf);
-
-	AllocRenderTarget();
-
-	g_video.alloc_framebuf = true;
 }
 #define MIN(x, y) (((x) < (y)) ? (x) : (y))
 void resize_cb(int w, int h) {
 
-	if (g_video.alloc_framebuf)
+	if (g_video.last_w != w || g_video.last_h != h)
 	{
-		if (g_video.last_w != w || g_video.last_h != h)
-		{
 			DeallocRenderTarget();
 			AllocRenderTarget();
-			refresh_vertex_data();
-		}
-		g_video.last_w = w;
-		g_video.last_h = h;
+			g_video.last_w = w;
+			g_video.last_h = h;
 	}
 	double renderwidth = (double)g_video.base_w;
 	double renderheight = (double)g_video.base_h;
@@ -482,7 +471,6 @@ BOOL CenterWindow(HWND hwndWindow)
 
 void video_configure(const struct retro_game_geometry *geom, HWND hwnd) {
 	int nwidth = 0, nheight = 0;
-	g_video.alloc_framebuf = false;
 	resize_to_aspect(geom->aspect_ratio, geom->base_width * 1, geom->base_height * 1, &nwidth, &nheight);
 
 	nwidth *= 1;
@@ -515,7 +503,11 @@ void video_configure(const struct retro_game_geometry *geom, HWND hwnd) {
 
 	glBindTexture(GL_TEXTURE_2D, 0);
 
+
+	g_video.D3D_sharehandle = wglDXOpenDeviceNV(g_video.D3D_device);
+	g_video.D3D_device->GetBackBuffer(0, 0, D3DBACKBUFFER_TYPE_MONO, &g_video.D3D_backbuf);
 	init_framebuffer(geom->base_width, geom->base_height);
+	AllocRenderTarget();
 
 	g_video.tex_w = geom->max_width;
 	g_video.tex_h = geom->max_height;
@@ -561,6 +553,7 @@ void video_refresh(const void *data, unsigned width, unsigned height, unsigned p
 
 	RECT clientRect, displayrect;
 	GetClientRect(g_video.D3D_hwnd, &clientRect);
+
 	if (g_video.base_w != width || g_video.base_h != height)
 	{
 		g_video.base_h = height;
@@ -571,12 +564,10 @@ void video_refresh(const void *data, unsigned width, unsigned height, unsigned p
 	resize_cb(clientRect.right, clientRect.bottom);
 
 	glBindTexture(GL_TEXTURE_2D, g_video.tex_id);
-
 	if (pitch != g_video.pitch) {
 		g_video.pitch = pitch;
 		glPixelStorei(GL_UNPACK_ROW_LENGTH, g_video.pitch / g_video.bpp);
 	}
-
 	if (data && data != RETRO_HW_FRAME_BUFFER_VALID) {
 		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, width, height,
 			g_video.pixtype, g_video.pixfmt, data);
