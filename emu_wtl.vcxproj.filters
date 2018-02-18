@@ -3,7 +3,6 @@
   <ItemGroup>
     <ClCompile Include="CLibretro.cpp" />
     <ClCompile Include="gui\emu_wtl.cpp" />
-    <ClCompile Include="stdafx.cpp" />
     <ClCompile Include="io\abstract_file.cpp">
       <Filter>blargg</Filter>
     </ClCompile>
@@ -46,17 +45,13 @@
     <ClCompile Include="io\audio.cpp">
       <Filter>io</Filter>
     </ClCompile>
+    <ClCompile Include="stdafx.cpp">
+      <Filter>gui</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="CLibretro.h" />
-    <ClInclude Include="gui\DropFileTarget.h" />
     <ClInclude Include="gui\emu_wtl.h" />
-    <ClInclude Include="gui\MyWindow.h" />
-    <ClInclude Include="gui\Resource.h" />
-    <ClInclude Include="gui\utf8conv.h" />
-    <ClInclude Include="libretro.h" />
-    <ClInclude Include="stdafx.h" />
-    <ClInclude Include="targetver.h" />
     <ClInclude Include="io\blargg_source.h">
       <Filter>blargg</Filter>
     </ClInclude>
@@ -96,6 +91,31 @@
     <ClInclude Include="io\audio.h">
       <Filter>io</Filter>
     </ClInclude>
+    <ClInclude Include="3rdparty\libretro.h" />
+    <ClInclude Include="gui\DropFileTarget.h">
+      <Filter>gui</Filter>
+    </ClInclude>
+    <ClInclude Include="gui\MyWindow.h">
+      <Filter>gui</Filter>
+    </ClInclude>
+    <ClInclude Include="gui\Resource.h">
+      <Filter>gui</Filter>
+    </ClInclude>
+    <ClInclude Include="stdafx.h">
+      <Filter>gui</Filter>
+    </ClInclude>
+    <ClInclude Include="targetver.h">
+      <Filter>gui</Filter>
+    </ClInclude>
+    <ClInclude Include="gui\utf8conv.h">
+      <Filter>gui</Filter>
+    </ClInclude>
+    <ClInclude Include="gui\InputConfig.h">
+      <Filter>gui</Filter>
+    </ClInclude>
+    <ClInclude Include="gui\CoreVariablesConfig.h">
+      <Filter>gui</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="gui\emu_wtl.rc" />
@@ -116,6 +136,9 @@
     </Filter>
     <Filter Include="io">
       <UniqueIdentifier>{d1bc58e8-62ef-4db2-9c8a-646c5f894846}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="gui">
+      <UniqueIdentifier>{55c6abfd-f0b1-4f38-96ad-4c11e969efbc}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
 </Project>
