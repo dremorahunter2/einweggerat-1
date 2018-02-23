@@ -252,14 +252,12 @@ bool core_environment(unsigned cmd, void *data) {
 				{
 					if (var->index == RETRO_DEVICE_INDEX_ANALOG_LEFT)
 					{
-						if (var->id == RETRO_DEVICE_ID_ANALOG_X)id = 16;
-						if (var->id == RETRO_DEVICE_ID_ANALOG_Y)id = 17;
+						var->id = RETRO_DEVICE_ID_ANALOG_X ? 16 : 17;
 						input_device->bl->add(keyboard, i, str.GetBuffer(NULL), id);
 					}
 					if (var->index == RETRO_DEVICE_INDEX_ANALOG_RIGHT)
 					{
-						if (var->id == RETRO_DEVICE_ID_ANALOG_X)id = 18;
-						if (var->id == RETRO_DEVICE_ID_ANALOG_Y)id = 19;
+						var->id = RETRO_DEVICE_ID_ANALOG_X ? 18 : 19;
 						input_device->bl->add(keyboard, i, str.GetBuffer(NULL), id);
 					}
 				}
