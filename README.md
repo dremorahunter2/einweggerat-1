@@ -6,7 +6,7 @@ A libretro debugging tool.
 
 Well, its meant to be. Needed something like this for ages.
 
-Requires Windows Vista SP1.
+Requires Windows Vista SP1. No exceptions.
 
 Has:
 * Dynamic rate control
@@ -14,12 +14,8 @@ Has:
 * OpenGL/Direct3D9 interop based rendering
 * DirectInput/Xinput input
 * DirectSound/WASAPI/WinMM audio output
-
-It intentionally does not have features like:
-* Video recording
-* Cheats
-* Post processing shaders
-* Rewind
+* Command line based ROM/core loading
+* Savestates
 
 ![einweggerät](https://rebote.net/linkage/einweg2.PNG)
 ![einweggerät](https://rebote.net/linkage/einweg3.PNG)
