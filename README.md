@@ -16,6 +16,7 @@ Has:
 * DirectSound/WASAPI/WinMM audio output
 * Command line based ROM/core loading
 * Savestates
+* Per-game input/core option loading/saving
 
 ![einweggerät](https://rebote.net/linkage/einweg2.PNG)
 ![einweggerät](https://rebote.net/linkage/einweg3.PNG)
