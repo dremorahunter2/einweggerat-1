@@ -2,7 +2,7 @@
 
 ![einweggerät](https://rebote.net/linkage/einweg1.PNG)
 
-A libretro debugging tool.
+A Windows only libretro core debugging tool.
 
 Well, its meant to be. Needed something like this for ages.
 
