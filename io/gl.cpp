@@ -295,7 +295,7 @@ void init_framebuffer(int width, int height)
 }
 #define MIN(x, y) (((x) < (y)) ? (x) : (y))
 void resize_cb(int w, int h) {
-
+	if (!w || !h)return;
 	if (g_video.last_w != w || g_video.last_h != h)
 	{
 			DeallocRenderTarget();
@@ -313,7 +313,7 @@ void resize_cb(int w, int h) {
 	double vp_x = (double)w / renderwidth;
 	double vp_y = (double)h / renderheight;
 	double render_scale = MIN(vp_x,vp_y);
-	RECT rect;
+	RECT rect = { 0 };
 	rect.right = (int32_t)(renderwidth * render_scale);
 	rect.bottom = (int32_t)(renderheight * render_scale);
 	rect.left = (w - rect.right) / 2;
