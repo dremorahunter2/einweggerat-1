@@ -294,13 +294,16 @@ void init_framebuffer(int width, int height)
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 #define MIN(x, y) (((x) < (y)) ? (x) : (y))
-void resize_cb(int w, int h) {
-	if (g_video.last_w != w && w || g_video.last_h != h && w)
+void resize_cb() {
+	RECT clientRect;
+	GetClientRect(g_video.D3D_hwnd, &clientRect);
+	if (g_video.last_w != clientRect.right && clientRect.right || 
+	g_video.last_h != clientRect.bottom &&  clientRect.bottom)
 	{
 			DeallocRenderTarget();
 			AllocRenderTarget();
-			g_video.last_w = w;
-			g_video.last_h = h;
+			g_video.last_w = clientRect.right;
+			g_video.last_h = clientRect.bottom;
 	}
 	double renderwidth = (double)g_video.base_w;
 	double renderheight = (double)g_video.base_h;
@@ -550,9 +553,6 @@ void video_refresh(const void *data, unsigned width, unsigned height, unsigned p
 	wglDXLockObjectsNV(g_video.D3D_sharehandle, 1, &g_video.GL_htexture);
 	glBindFramebuffer(GL_FRAMEBUFFER, g_video.blit_fbo);
 
-	RECT clientRect, displayrect;
-	GetClientRect(g_video.D3D_hwnd, &clientRect);
-
 	if (g_video.base_w != width || g_video.base_h != height)
 	{
 		g_video.base_h = height;
@@ -560,7 +560,7 @@ void video_refresh(const void *data, unsigned width, unsigned height, unsigned p
 		refresh_vertex_data();
 	}
 
-	resize_cb(clientRect.right, clientRect.bottom);
+	resize_cb();
 
 	glBindTexture(GL_TEXTURE_2D, g_video.tex_id);
 	if (pitch != g_video.pitch) {
