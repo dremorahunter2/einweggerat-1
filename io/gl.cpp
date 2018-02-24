@@ -548,7 +548,7 @@ bool video_set_pixel_format(unsigned format) {
 
 
 void video_refresh(const void *data, unsigned width, unsigned height, unsigned pitch) {
-	
+	wglDXLockObjectsNV(g_video.D3D_sharehandle, 1, &g_video.GL_htexture);
 	glBindFramebuffer(GL_FRAMEBUFFER, g_video.blit_fbo);
 
 	RECT clientRect, displayrect;
@@ -610,7 +610,7 @@ void video_refresh(const void *data, unsigned width, unsigned height, unsigned p
 		AllocRenderTarget();
 		return;
 	}
-	wglDXLockObjectsNV(g_video.D3D_sharehandle, 1, &g_video.GL_htexture);
+
 }
 
 void video_deinit() {
