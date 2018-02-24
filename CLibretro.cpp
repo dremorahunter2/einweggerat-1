@@ -241,28 +241,19 @@ bool core_environment(unsigned cmd, void *data) {
 			static int i = 0;
 			while (var != NULL && var->port == 0)
 			{
-				
 				dinput::di_event keyboard;
 				keyboard.type = dinput::di_event::ev_none;
 				keyboard.key.type = dinput::di_event::key_none;
 				keyboard.key.which = NULL;
 				CString str = var->description;
 			    int id = var->id;
-				if (var->device == RETRO_DEVICE_ANALOG)
+				int index = var->index;
+				if (var->device == RETRO_DEVICE_ANALOG || (var->device == RETRO_DEVICE_JOYPAD))
 				{
-					if (var->index == RETRO_DEVICE_INDEX_ANALOG_LEFT)
-					{
-						id  = (var->id == RETRO_DEVICE_ID_ANALOG_X) ? 16 : 17;
-						input_device->bl->add(keyboard, i, str.GetBuffer(NULL), id);
-					}
-					if (var->index == RETRO_DEVICE_INDEX_ANALOG_RIGHT)
-					{
-						id = (var->id == RETRO_DEVICE_ID_ANALOG_X) ? 18 : 19;
-						input_device->bl->add(keyboard, i, str.GetBuffer(NULL), id);
-					}
-				}
-				else if (var->device == RETRO_DEVICE_JOYPAD)
-				{
+					if (var->device == RETRO_DEVICE_ANALOG)
+					id = (index == RETRO_DEVICE_INDEX_ANALOG_LEFT) ? (var->id == RETRO_DEVICE_ID_ANALOG_X ? 16 : 17) :
+					(var->id == RETRO_DEVICE_ID_ANALOG_X ? 18 : 19);
+
 					input_device->bl->add(keyboard, i, str.GetBuffer(NULL), id);
 				}
 				i++;++var;
@@ -340,43 +331,36 @@ static int16_t core_input_state(unsigned port, unsigned device, unsigned index, 
 
 		for (unsigned int i = 0; i < input_device->bl->get_count(); i++) {
 			{
-				if (device == RETRO_DEVICE_ANALOG)
+				if (device == RETRO_DEVICE_ANALOG || device == RETRO_DEVICE_JOYPAD)
 				{
-					if (index == RETRO_DEVICE_INDEX_ANALOG_LEFT )
-					{
-						int retro_id = 0;
-						int16_t value = 0;
-						bool isanalog = false;
-						input_device->getbutton(i, value, retro_id,isanalog);
-						if (value <= -0x8000)value = -0x7fff;
-						if (value >= 0x8000)value = 0x7fff;
-						if ((id == RETRO_DEVICE_ID_ANALOG_X && retro_id == 16) || (id == RETRO_DEVICE_ID_ANALOG_Y && retro_id == 17))
-						{
-							return isanalog ? -value : value;
-						}
-					}
-					else if (index == RETRO_DEVICE_INDEX_ANALOG_RIGHT)
-					{
-						int retro_id = 0;
-						int16_t value = 0;
-						bool isanalog = false;
-						input_device->getbutton(i, value, retro_id, isanalog);
-						if (value <= -0x8000)value = -0x7fff;
-						if (value >= 0x8000)value = 0x7fff;
-						if ((id == RETRO_DEVICE_ID_ANALOG_X && retro_id == 18) || (id == RETRO_DEVICE_ID_ANALOG_Y && retro_id == 19))
-						{
-							return isanalog ? -value : value;
-						}
-					}
-				}
-				else if (device == RETRO_DEVICE_JOYPAD)
-				{
-					int retro_id;
+					int retro_id = 0;
 					int16_t value = 0;
 					bool isanalog = false;
 					input_device->getbutton(i, value, retro_id, isanalog);
-					value = abs(value);
-					if (retro_id == id)return value;
+					if (device == RETRO_DEVICE_ANALOG)
+					{
+						if (value <= -0x8000)value = -0x7fff;
+						if (value >= 0x8000)value = 0x7fff;
+						if (index == RETRO_DEVICE_INDEX_ANALOG_LEFT)
+						{
+							if ((id == RETRO_DEVICE_ID_ANALOG_X && retro_id == 16) || (id == RETRO_DEVICE_ID_ANALOG_Y && retro_id == 17))
+							{
+								return isanalog ? -value : value;
+							}
+						}
+						else 
+						{
+							if ((id == RETRO_DEVICE_ID_ANALOG_X && retro_id == 18) || (id == RETRO_DEVICE_ID_ANALOG_Y && retro_id == 19))
+							{
+								return isanalog ? -value : value;
+							}
+						}
+					}
+					else
+					{
+						value = abs(value);
+						if (retro_id == id)return value;
+					}
 				}
 			}
 		}
