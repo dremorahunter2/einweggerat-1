@@ -252,12 +252,12 @@ bool core_environment(unsigned cmd, void *data) {
 				{
 					if (var->index == RETRO_DEVICE_INDEX_ANALOG_LEFT)
 					{
-						var->id = RETRO_DEVICE_ID_ANALOG_X ? 16 : 17;
+						id  = (var->id == RETRO_DEVICE_ID_ANALOG_X) ? 16 : 17;
 						input_device->bl->add(keyboard, i, str.GetBuffer(NULL), id);
 					}
 					if (var->index == RETRO_DEVICE_INDEX_ANALOG_RIGHT)
 					{
-						var->id = RETRO_DEVICE_ID_ANALOG_X ? 18 : 19;
+						id = (var->id == RETRO_DEVICE_ID_ANALOG_X) ? 18 : 19;
 						input_device->bl->add(keyboard, i, str.GetBuffer(NULL), id);
 					}
 				}
@@ -342,7 +342,7 @@ static int16_t core_input_state(unsigned port, unsigned device, unsigned index, 
 			{
 				if (device == RETRO_DEVICE_ANALOG)
 				{
-					if (index == RETRO_DEVICE_INDEX_ANALOG_LEFT)
+					if (index == RETRO_DEVICE_INDEX_ANALOG_LEFT )
 					{
 						int retro_id = 0;
 						int16_t value = 0;
