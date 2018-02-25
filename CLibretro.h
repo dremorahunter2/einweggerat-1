@@ -38,6 +38,8 @@ public:
 		char usevars[256];
 	};
 	TCHAR inputcfg_path[MAX_PATH];
+	TCHAR sys_filename[MAX_PATH];
+	TCHAR sav_filename[MAX_PATH];
 	TCHAR corevar_path[MAX_PATH];
 	std::vector<core_vars> variables;
 	bool variables_changed;
@@ -61,6 +63,7 @@ public:
 	bool core_load(TCHAR *sofile,bool specifics, TCHAR* filename, TCHAR* core_filename);
 	bool init(HWND hwnd);
 	bool savestate(TCHAR* filename, bool save = false);
+	bool savesram(TCHAR* filename, bool save = false);
 	void kill();
 	BOOL isEmulating;
 	void core_audio_sample(int16_t left, int16_t right);

@@ -18,7 +18,6 @@ using namespace utf8util;
 static struct {
 	HMODULE handle;
 	bool initialized;
-
 	void(*retro_init)(void);
 	void(*retro_deinit)(void);
 	unsigned(*retro_api_version)(void);
@@ -31,7 +30,8 @@ static struct {
 	bool(*retro_serialize)(void *data, size_t size);
 	bool(*retro_unserialize)(const void *data, size_t size);
 	bool(*retro_load_game)(const struct retro_game_info *game);
-	//	bool retro_load_game_special(unsigned game_type, const struct retro_game_info *info, size_t num_info);
+	void *(*retro_get_memory_data)(unsigned id);
+	size_t(*retro_get_memory_size)(unsigned id);
 	void(*retro_unload_game)(void);
 } g_retro;
 
@@ -195,10 +195,7 @@ bool core_environment(unsigned cmd, void *data) {
 		static char *sys_path = NULL;
 		if (!sys_path)
 		{
-			TCHAR sys_filename[MAX_PATH] = { 0 };
-			GetCurrentDirectory(MAX_PATH, sys_filename);
-			PathAppend(sys_filename, L"system");
-			string ansi = utf8_from_utf16(sys_filename);
+			string ansi = utf8_from_utf16(retro->sys_filename);
 			sys_path = strdup(ansi.c_str());
 		}
 		char **ppDir = (char**)data;
@@ -384,33 +381,77 @@ bool CLibretro::savestate(TCHAR* filename, bool save)
 	{
 		paused = true;
 		size_t size = g_retro.retro_serialize_size();
-		if (save)
+		if (size)
 		{
-			FILE *Input = _wfopen(filename, L"wb");
-			if (!Input) return(NULL);
-			// Get the filesize
-			BYTE *Memory = (BYTE *)malloc(size);
-			g_retro.retro_serialize(Memory, size);
-			fwrite(Memory, 1, size, Input);
-			fclose(Input);
-			Input = NULL;
-			paused = false;
-			return true;
+			if (save)
+			{
+				FILE *Input = _wfopen(filename, L"wb");
+				if (!Input) return(NULL);
+				// Get the filesize
+				BYTE *Memory = (BYTE *)malloc(size);
+				g_retro.retro_serialize(Memory, size);
+				fwrite(Memory, 1, size, Input);
+				fclose(Input);
+				Input = NULL;
+				paused = false;
+				return true;
 
+			}
+			else
+			{
+				FILE *Input = _wfopen(filename, L"rb");
+				fseek(Input, 0, SEEK_END);
+				int Size = ftell(Input);
+				fseek(Input, 0, SEEK_SET);
+				BYTE *Memory = (BYTE *)malloc(Size);
+				fread(Memory, 1, Size, Input);
+				g_retro.retro_unserialize(Memory, size);
+				if (Input) fclose(Input);
+				Input = NULL;
+				paused = false;
+				return true;
+			}
 		}
-		else
+	}
+	return false;
+}
+
+bool CLibretro::savesram(TCHAR* filename, bool save)
+{
+	if (isEmulating)
+	{
+		size_t size = g_retro.retro_get_memory_size(RETRO_MEMORY_SAVE_RAM);
+		if (size)
 		{
-			FILE *Input = _wfopen(filename, L"rb");
-			fseek(Input, 0, SEEK_END);
-			int Size = ftell(Input);
-			fseek(Input, 0, SEEK_SET);
-			BYTE *Memory = (BYTE *)malloc(Size);
-			fread(Memory, 1, Size, Input);
-			g_retro.retro_unserialize(Memory, size);
-			if (Input) fclose(Input);
-			Input = NULL;
-			paused = false;
-			return true;
+			if (save)
+			{
+				FILE *Input = _wfopen(filename, L"wb");
+				if (!Input) return(NULL);
+				// Get the filesize
+				BYTE *Memory = (BYTE *)g_retro.retro_get_memory_data(RETRO_MEMORY_SAVE_RAM);
+				fwrite(Memory, 1, size, Input);
+				fclose(Input);
+				Input = NULL;
+				paused = false;
+				return true;
+
+			}
+			else
+			{
+				FILE *Input = _wfopen(filename, L"rb");
+				if (!Input) return(NULL);
+				fseek(Input, 0, SEEK_END);
+				int Size = ftell(Input);
+				fseek(Input, 0, SEEK_SET);
+				BYTE *Memory = (BYTE *)malloc(Size);
+				fread(Memory, 1, Size, Input);
+				BYTE *Memory_load = (BYTE *)g_retro.retro_get_memory_data(RETRO_MEMORY_SAVE_RAM);
+				memcpy(Memory_load, Memory, Size);
+				if (Input) fclose(Input);
+				Input = NULL;
+				paused = false;
+				return true;
+			}
 		}
 	}
 	return false;
@@ -444,7 +485,7 @@ static size_t core_audio_sample_batch(const int16_t *data, size_t frames) {
 	return frames;
 }
 
-bool CLibretro::core_load(TCHAR *sofile,bool gamespecificoptions, TCHAR* filename,TCHAR* core_filename) {
+bool CLibretro::core_load(TCHAR *sofile,bool gamespecificoptions, TCHAR* game_filename,TCHAR* core_filename) {
 	
 	memset(&g_retro, 0, sizeof(g_retro));
 	g_retro.handle = LoadLibrary(sofile);
@@ -468,6 +509,8 @@ bool CLibretro::core_load(TCHAR *sofile,bool gamespecificoptions, TCHAR* filenam
 	load_retro_sym(retro_serialize);
 	load_retro_sym(retro_unserialize);
 	load_retro_sym(retro_serialize_size);
+	load_retro_sym(retro_get_memory_size);
+	load_retro_sym(retro_get_memory_data);
 	void(*set_environment)(retro_environment_t) = NULL;
 	void(*set_video_refresh)(retro_video_refresh_t) = NULL;
 	void(*set_input_poll)(retro_input_poll_t) = NULL;
@@ -482,22 +525,27 @@ bool CLibretro::core_load(TCHAR *sofile,bool gamespecificoptions, TCHAR* filenam
 	load_sym(set_audio_sample, retro_set_audio_sample);
 	load_sym(set_audio_sample_batch, retro_set_audio_sample_batch);
 
+	TCHAR filez[MAX_PATH] = { 0 };
+	lstrcpy(filez, game_filename);
+	PathStripPath(filez);
+	PathRemoveExtension(filez);
+	TCHAR core_path[MAX_PATH] = { 0 };
+	GetModuleFileNameW(g_retro.handle, core_path, sizeof(core_path));
+	PathRemoveExtension(core_path);
+	GetCurrentDirectory(MAX_PATH, sys_filename);
+	PathAppend(sys_filename, L"system");
+	lstrcpy(sav_filename, sys_filename);
+	PathAppend(sav_filename, filez);
+	lstrcat(sav_filename, L".sav");
 
-	TCHAR core_filename2[MAX_PATH] = { 0 };
-	GetModuleFileNameW(g_retro.handle, core_filename2, sizeof(core_filename2));
-
-
+	memset(inputcfg_path, 0, MAX_PATH);
+	memset(corevar_path, 0, MAX_PATH);
+	
 	if (gamespecificoptions)
 	{
-		TCHAR filez[MAX_PATH] = { 0 };
-		lstrcpy(filez, filename);
-		memset(inputcfg_path, 0, MAX_PATH);
-		memset(corevar_path, 0, MAX_PATH);
-		PathRemoveExtension(core_filename2);
-		PathStripPath(filez);
-		PathRemoveExtension(filez);
-		lstrcpy(inputcfg_path, core_filename2);
-		lstrcpy(corevar_path, core_filename2);
+		
+		lstrcpy(inputcfg_path, core_path);
+		lstrcpy(corevar_path, core_path);
 		PathAppend(inputcfg_path, filez);
 		PathAppend(corevar_path, filez);
 		lstrcat(inputcfg_path, L"_input.cfg");
@@ -505,11 +553,9 @@ bool CLibretro::core_load(TCHAR *sofile,bool gamespecificoptions, TCHAR* filenam
 	}
 	else
 	{
-		memset(inputcfg_path, 0, MAX_PATH);
-		memset(corevar_path, 0, MAX_PATH);
-		PathRemoveExtension(core_filename2);
-		lstrcat(inputcfg_path, core_filename2);
-		lstrcat(corevar_path, core_filename2);
+		
+		lstrcat(inputcfg_path, core_path);
+		lstrcat(corevar_path, core_path);
 		lstrcat(inputcfg_path, L"_input.cfg");
 		lstrcat(corevar_path, L".ini");
 	}
@@ -643,6 +689,11 @@ bool CLibretro::loadfile(TCHAR* filename, TCHAR* core_filename,bool gamespecific
 	isEmulating = true;
 	lastTime = milliseconds_now()/1000;
     nbFrames = 0;
+
+	
+	savesram(sav_filename);
+
+
 	return true;
 }
 
@@ -694,7 +745,7 @@ bool CLibretro::init(HWND hwnd)
 
 void CLibretro::kill()
 {
-	isEmulating = false;
+	savesram(sav_filename,true);
 	_audio.destroy();
 	video_deinit();
 	g_retro.retro_unload_game();
