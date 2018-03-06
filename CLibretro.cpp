@@ -368,11 +368,14 @@ static int16_t core_input_state(unsigned port, unsigned device, unsigned index, 
 
 void CLibretro::core_audio_sample(int16_t left, int16_t right)
 {
-	if (_samplesCount < SAMPLE_COUNT - 1)
-	{
-		_samples[_samplesCount++] = left;
-		_samples[_samplesCount++] = right;
-	}
+	int16_t buf[2] = { left, right };
+	_audio.mix(buf,1);
+}
+
+size_t CLibretro::core_audio_sample_batch(const int16_t *data, size_t frames)
+{
+	_audio.mix(data, frames);
+	return frames;
 }
 
 bool CLibretro::savestate(TCHAR* filename, bool save)
@@ -460,16 +463,6 @@ bool CLibretro::savesram(TCHAR* filename, bool save)
 void CLibretro::reset()
 {
 	if(isEmulating)g_retro.retro_reset();
-}
-
-size_t CLibretro::core_audio_sample_batch(const int16_t *data, size_t frames)
-{
-	if (_samplesCount < SAMPLE_COUNT - frames * 2 + 1)
-	{
-		memcpy(_samples + _samplesCount, data, frames * 2 * sizeof(int16_t));
-		_samplesCount += frames * 2;
-	}
-	return frames;
 }
 
 
@@ -676,13 +669,24 @@ bool CLibretro::loadfile(TCHAR* filename, TCHAR* core_filename,bool gamespecific
 
 	::video_configure(&av.geometry, emulator_hwnd);
 
-	_samples = (int16_t*)malloc(SAMPLE_COUNT);
-	memset(_samples, 0, SAMPLE_COUNT);
+	DEVMODE lpDevMode;
+	memset(&lpDevMode, 0, sizeof(DEVMODE));
+	lpDevMode.dmSize = sizeof(DEVMODE);
+	lpDevMode.dmDriverExtra = 0;
+	double refreshr = 0;
+	if (EnumDisplaySettings(NULL, ENUM_CURRENT_SETTINGS, &lpDevMode) == 0) {
+		
+		DWM_TIMING_INFO timing_info = { 0 };
+		timing_info.cbSize = sizeof(timing_info);
+		DwmGetCompositionTimingInfo(NULL, &timing_info);
+		refreshr = (timing_info.qpcRefreshPeriod) / 1000;
+	}
+	else
+	{
+		refreshr = lpDevMode.dmDisplayFrequency;
+	}
 
-	DWM_TIMING_INFO timing_info;
-	timing_info.cbSize = sizeof(timing_info);
-	DwmGetCompositionTimingInfo(NULL, &timing_info);
-	double refreshr = (timing_info.qpcRefreshPeriod) / 1000;
+	
 	_audio.init(refreshr,av);
 	frame_count = 0;
 	paused = false;
@@ -719,10 +723,8 @@ void CLibretro::run()
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 		glClearColor(0, 0, 0, 1);
 		glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
-		_samplesCount = 0;
 		if (!paused)g_retro.retro_run();
-	    if(_samplesCount)_audio.mix(_samples, _samplesCount/2);
-		_audio.sleeplil();
+		//_audio.sleeplil();
 		// Measure speed
 		double currentTime = milliseconds_now()/1000;
 		nbFrames++;

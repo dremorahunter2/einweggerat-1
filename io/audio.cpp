@@ -1,5 +1,8 @@
 #include "audio.h"
 using namespace std;
+
+#define SAMPLE_COUNT (1024 *2)
+
 static mal_uint32 audio_callback(mal_device* pDevice, mal_uint32 frameCount, void* pSamples)
 {
 	//convert from samples to the actual number of bytes.
@@ -52,8 +55,9 @@ bool Audio::init(double refreshra, retro_system_av_info av)
 	client_rate = 44100;
 	resamp_original = (client_rate / system_rate);
 
-	output_float = new float[SAMPLE_COUNT * 4];
+	output_float = new float[SAMPLE_COUNT * 4]; //spare space for resampler
 	input_float = new float[SAMPLE_COUNT];
+	_fifo = fifo_new(SAMPLE_COUNT * sizeof(float) * 2);
 
 	resample = resampler_sinc_init(resamp_original);
 	if (mal_context_init(NULL, 0, NULL, &context) != MAL_SUCCESS) {
@@ -61,8 +65,7 @@ bool Audio::init(double refreshra, retro_system_av_info av)
 		return false;
 	}
 	mal_device_config config = mal_device_config_init_playback(mal_format_f32, 2, client_rate, audio_callback);
-	config.bufferSizeInFrames = 2048;
-	_fifo = fifo_new(SAMPLE_COUNT);
+	
 	if (mal_device_init(&context, mal_device_type_playback, NULL, &config, this, &device) != MAL_SUCCESS) {
 		mal_context_uninit(&context);
 		return false;
@@ -101,32 +104,37 @@ void Audio::sleeplil()
 	frame_limit_last_time = microseconds_now();
 }
 
-void Audio::mix(const int16_t* samples, size_t frames)
+void Audio::mix(const int16_t* samples, size_t size)
 {
-	uint32_t in_len = frames * 2;
+	uint32_t in_len = size * 2;
 	int available = fifo_write_avail(_fifo);
 	double drc_ratio = resamp_original *  (1.0 + skew * ((double)(available - SAMPLE_COUNT * 2) / SAMPLE_COUNT));
 	mal_pcm_s16_to_f32(input_float, samples, in_len);
 
 	struct resampler_data src_data = { 0 };
-	src_data.input_frames = frames;
+	src_data.input_frames = size;
 	src_data.ratio = drc_ratio;
 	src_data.data_in = input_float;
 	src_data.data_out = output_float;
 	resampler_sinc_process(resample, &src_data);
 	int out_len = src_data.output_frames * 2 * sizeof(float);
 
-	std::unique_lock<std::mutex> l(lock);
-	buffer_full.wait(l, [this, out_len]() {return out_len < fifo_write_avail(_fifo); });
-
-	fifo_write(_fifo, output_float, out_len);
+	size_t written = 0;
+	while (written < out_len)
+	{
+		size_t avail = fifo_write_avail(_fifo);
+		if (avail)
+		{
+			size_t write_amt = out_len - written > avail ? avail : out_len - written;
+			fifo_write(_fifo, (const char*)output_float + written, write_amt);
+			written += write_amt;
+		}
+	}
 }
 
 mal_uint32 Audio::fill_buffer(uint8_t* out, mal_uint32 count) {
-	std::lock_guard<std::mutex> lg(mutex);
 	size_t avail = fifo_read_avail(_fifo);
 	size_t write_size = count > avail ? avail : count;
-	buffer_full.notify_all();
 	fifo_read(_fifo, out, write_size);
 	memset(out + write_size, 0, count - write_size);
 	return count;

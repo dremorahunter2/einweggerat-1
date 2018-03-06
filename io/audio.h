@@ -12,7 +12,7 @@
 #include "queues/fifo_queue.h"
 #include "rthreads/rthreads.h"
 
-#define SAMPLE_COUNT (1024 *12)
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -46,9 +46,6 @@ extern "C" {
 		void* resample;
 		float *input_float;
 		float *output_float;
-
-		std::mutex lock;
-		std::condition_variable buffer_full;
 	};
 
 
