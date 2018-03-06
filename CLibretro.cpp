@@ -724,8 +724,6 @@ void CLibretro::run()
 		glClearColor(0, 0, 0, 1);
 		glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
 		if (!paused)g_retro.retro_run();
-		//_audio.sleeplil();
-		// Measure speed
 		double currentTime = milliseconds_now()/1000;
 		nbFrames++;
 		if (currentTime - lastTime >= 0.5) { // If last prinf() was more than 1 sec ago

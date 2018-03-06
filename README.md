@@ -10,12 +10,12 @@ Requires Windows Vista SP1. No exceptions.
 
 Has:
 * Dynamic rate control
-* Frame throttling
+* Vsync
 * OpenGL/Direct3D9 interop based rendering
 * DirectInput/Xinput input
 * DirectSound/WASAPI/WinMM audio output
 * Command line based ROM/core loading
-* Savestates
+* Savestates/SRAM saving/loading
 * Per-game input/core option loading/saving
 
 ![einweggerät](https://rebote.net/linkage/einweg2.PNG)
