@@ -468,14 +468,17 @@ void CLibretro::reset()
 
 static void core_audio_sample(int16_t left, int16_t right) {
 	CLibretro* lib = CLibretro::GetSingleton();
+	if(lib->isEmulating)
 	lib->core_audio_sample(left, right);
 }
 
 
 static size_t core_audio_sample_batch(const int16_t *data, size_t frames) {
 	CLibretro* lib = CLibretro::GetSingleton();
-	lib->core_audio_sample_batch(data, frames);
+	if (lib->isEmulating)
+	{lib->core_audio_sample_batch(data, frames);
 	return frames;
+	else return 0;
 }
 
 bool CLibretro::core_load(TCHAR *sofile,bool gamespecificoptions, TCHAR* game_filename,TCHAR* core_filename) {
