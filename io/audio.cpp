@@ -1,3 +1,4 @@
+#define MAL_IMPLEMENTATION
 #include "audio.h"
 using namespace std;
 

@@ -1,7 +1,5 @@
 #include "stdafx.h"
 #include <windows.h>
-#define OUTSIDE_SPEEX
-#define MAL_IMPLEMENTATION
 #include "CLibretro.h"
 #include "libretro.h"
 #include "io/gl_render.h"
@@ -476,8 +474,10 @@ static void core_audio_sample(int16_t left, int16_t right) {
 static size_t core_audio_sample_batch(const int16_t *data, size_t frames) {
 	CLibretro* lib = CLibretro::GetSingleton();
 	if (lib->isEmulating)
-	{lib->core_audio_sample_batch(data, frames);
-	return frames;
+	{
+		lib->core_audio_sample_batch(data, frames);
+		return frames;
+	}
 	else return 0;
 }
 
