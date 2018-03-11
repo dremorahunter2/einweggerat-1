@@ -48,6 +48,9 @@
     <ClCompile Include="stdafx.cpp">
       <Filter>gui</Filter>
     </ClCompile>
+    <ClCompile Include="3rdparty\libretro-common\rthreads\rthreads.c">
+      <Filter>io</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="CLibretro.h" />

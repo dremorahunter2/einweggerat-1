@@ -232,6 +232,7 @@
   <ItemGroup>
     <ClCompile Include="3rdparty\libretro-common\memmap\memalign.c" />
     <ClCompile Include="3rdparty\libretro-common\queues\fifo_queue.c" />
+    <ClCompile Include="3rdparty\libretro-common\rthreads\rthreads.c" />
     <ClCompile Include="3rdparty\resampler.c" />
     <ClCompile Include="CLibretro.cpp" />
     <ClCompile Include="gui\emu_wtl.cpp">

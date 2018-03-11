@@ -46,6 +46,8 @@ extern "C" {
 		void* resample;
 		float *input_float;
 		float *output_float;
+		slock_t *lockz;
+		scond_t *condz;
 	};
 
 
