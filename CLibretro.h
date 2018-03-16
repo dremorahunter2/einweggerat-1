@@ -35,6 +35,9 @@ public:
 	    char description[256];
 		char usevars[256];
 	};
+	bool gamespec;
+	TCHAR core_path[MAX_PATH];
+	TCHAR rom_path[MAX_PATH];
 	TCHAR inputcfg_path[MAX_PATH];
 	TCHAR sys_filename[MAX_PATH];
 	TCHAR sav_filename[MAX_PATH];
@@ -44,7 +47,7 @@ public:
 	HANDLE thread_handle;
 	DWORD thread_id;
 	HWND emulator_hwnd;
-	static DWORD WINAPI libretro_thread(void* Param);
+	DWORD ThreadStart();
 	static CLibretro* CreateInstance(HWND hwnd ) ;
 	static	CLibretro* GetSingleton( ) ;
 	CLibretro();
@@ -67,7 +70,6 @@ public:
 	void core_audio_sample(int16_t left, int16_t right);
 	size_t core_audio_sample_batch(const int16_t *data, size_t frames);
 	Audio  _audio;
-
 	double lastTime;
     int nbFrames;
 };

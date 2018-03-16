@@ -9,7 +9,10 @@
 #include <algorithm>
 using namespace std;
 using namespace utf8util;
+#include <sys/stat.h>
 
+#include <dwmapi.h>
+#pragma comment (lib,"dwmapi.lib")
 
 #define INLINE 
 
@@ -599,21 +602,16 @@ CLibretro::CLibretro()
 	isEmulating = false;
 }
 
-CLibretro::~CLibretro(void)
+static DWORD WINAPI libretro_thread(void* Param)
 {
-	if (isEmulating)isEmulating = false;
-	kill();
+	CLibretro* This = (CLibretro*)Param;
+	return This->ThreadStart();
 }
 
-#include <sys/stat.h>
-
-#include <dwmapi.h>
-#pragma comment (lib,"dwmapi.lib")
-bool CLibretro::loadfile(TCHAR* filename, TCHAR* core_filename,bool gamespecificoptions)
+DWORD CLibretro::ThreadStart(void)
 {
-	if (isEmulating)isEmulating = false;
 	variables.clear();
-	struct retro_system_info system = {0};	
+	struct retro_system_info system = { 0 };
 	g_video = { 0 };
 	g_video.hw.version_major = 3;
 	g_video.hw.version_minor = 3;
@@ -622,16 +620,16 @@ bool CLibretro::loadfile(TCHAR* filename, TCHAR* core_filename,bool gamespecific
 	g_video.hw.context_destroy = NULL;
 	variables_changed = false;
 
-	if (!core_load(core_filename,gamespecificoptions,filename,core_filename))
+	if (!core_load(core_path, gamespec, rom_path, core_path))
 	{
 		printf("FAILED TO LOAD CORE!!!!!!!!!!!!!!!!!!");
 		return false;
 	}
-	
+
 	CHAR szFileName[MAX_PATH] = { 0 };
-	string ansi = utf8_from_utf16(filename);
+	string ansi = utf8_from_utf16(rom_path);
 	strcpy(szFileName, ansi.c_str());
-	struct retro_game_info info = {0};
+	struct retro_game_info info = { 0 };
 	struct stat st;
 	stat(szFileName, &st);
 	info.path = szFileName;
@@ -641,7 +639,7 @@ bool CLibretro::loadfile(TCHAR* filename, TCHAR* core_filename,bool gamespecific
 
 	g_retro.retro_get_system_info(&system);
 	if (!system.need_fullpath) {
-		FILE *Input = _wfopen(filename, L"rb");
+		FILE *Input = _wfopen(rom_path, L"rb");
 		if (!Input)
 		{
 			printf("FAILED TO LOAD ROMz!!!!!!!!!!!!!!!!!!");
@@ -678,7 +676,7 @@ bool CLibretro::loadfile(TCHAR* filename, TCHAR* core_filename,bool gamespecific
 	lpDevMode.dmDriverExtra = 0;
 	double refreshr = 0;
 	if (EnumDisplaySettings(NULL, ENUM_CURRENT_SETTINGS, &lpDevMode) == 0) {
-		
+
 		DWM_TIMING_INFO timing_info = { 0 };
 		timing_info.cbSize = sizeof(timing_info);
 		DwmGetCompositionTimingInfo(NULL, &timing_info);
@@ -689,18 +687,57 @@ bool CLibretro::loadfile(TCHAR* filename, TCHAR* core_filename,bool gamespecific
 		refreshr = lpDevMode.dmDisplayFrequency;
 	}
 
-	
-	_audio.init(refreshr,av);
+
+	_audio.init(refreshr, av);
 	frame_count = 0;
 	paused = false;
-	isEmulating = true;
-	lastTime = milliseconds_now()/1000;
-    nbFrames = 0;
-
 	
+	lastTime = milliseconds_now() / 1000;
+	nbFrames = 0;
 	savesram(sav_filename);
+	isEmulating = true;
+	// Do stuff
+	while (isEmulating)
+	{
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+		glClearColor(0, 0, 0, 1);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		if (!paused)g_retro.retro_run();
+		double currentTime = milliseconds_now() / 1000;
+		nbFrames++;
+		if (currentTime - lastTime >= 0.5) { // If last prinf() was more than 1 sec ago
+											 // printf and reset timer
+			TCHAR buffer[100] = { 0 };
+			int len = swprintf(buffer, 100, L"einweggerät: %2f ms/frame\n, %d FPS", 1000.0 / double(nbFrames), nbFrames);
+			SetWindowText(emulator_hwnd, buffer);
+			nbFrames = 0;
+			lastTime += 1.0;
+		}
+	}
+
+	savesram(sav_filename, true);
+	_audio.destroy();
+	video_deinit();
+	g_retro.retro_unload_game();
+	g_retro.retro_deinit();
+}
 
 
+
+CLibretro::~CLibretro(void)
+{
+	if (isEmulating)isEmulating = false;
+	kill();
+}
+
+
+bool CLibretro::loadfile(TCHAR* filename, TCHAR* core_filename,bool gamespecificoptions)
+{
+	if (isEmulating)isEmulating = false;
+	gamespec = gamespecificoptions;
+	lstrcpy(rom_path, filename);
+	lstrcpy(core_path, core_filename);
+	thread_handle =CreateThread(NULL, 0, &libretro_thread, (void*)this, 0, &thread_id);
 	return true;
 }
 
@@ -721,23 +758,7 @@ void CLibretro::splash()
 
 void CLibretro::run()
 {
-	if(isEmulating)
-	{
-		glBindFramebuffer(GL_FRAMEBUFFER, 0);
-		glClearColor(0, 0, 0, 1);
-		glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
-		if (!paused)g_retro.retro_run();
-		double currentTime = milliseconds_now()/1000;
-		nbFrames++;
-		if (currentTime - lastTime >= 0.5) { // If last prinf() was more than 1 sec ago
-												 // printf and reset timer
-			TCHAR buffer[100] = { 0 };
-			int len = swprintf(buffer, 100, L"einweggerät: %2f ms/frame\n, %d FPS", 1000.0 / double(nbFrames),nbFrames);
-			SetWindowText(emulator_hwnd, buffer);
-			nbFrames = 0;
-			lastTime += 1.0;
-		}
-	}
+	
 }
 bool CLibretro::init(HWND hwnd)
 {
@@ -748,10 +769,9 @@ bool CLibretro::init(HWND hwnd)
 
 void CLibretro::kill()
 {
-	savesram(sav_filename,true);
-	_audio.destroy();
-	video_deinit();
-	g_retro.retro_unload_game();
-	g_retro.retro_deinit();
+	isEmulating = false;
+	WaitForSingleObject(thread_handle, INFINITE);
+	CloseHandle(thread_handle);
+	
 }
 

@@ -15,6 +15,8 @@
 #include "libretro.h"
 #include <shlwapi.h>
 #include "cmdline.h"
+#include <dwmapi.h>
+#pragma comment (lib,"dwmapi.lib")
 
 using namespace std;
 using namespace utf8util;
@@ -179,11 +181,6 @@ public:
 			return FALSE;
 		}
 
-		void DoFrame()
-		{
-			if (emulator->running())emulator->run();
-		}
-
 		LRESULT OnSize(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& bHandled)
 		{
 			if (!emulator->isEmulating)
@@ -214,9 +211,7 @@ public:
 			pLoop->AddMessageFilter(this);
 			RegisterDropTarget();
 			SetRedraw(FALSE);
-			TIMECAPS tc; timeGetDevCaps(&tc, sizeof(TIMECAPS)); 
-			UINT gwTimerRes = min(max(tc.wPeriodMin, 1), tc.wPeriodMax); 
-			timeBeginPeriod(gwTimerRes);
+			DwmEnableMMCSS(TRUE);
 			return 0;
 		}
 
@@ -249,9 +244,7 @@ public:
 
 		LRESULT OnDestroy(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& bHandled)
 		{
-			TIMECAPS tc; timeGetDevCaps(&tc, sizeof(TIMECAPS));
-			UINT gwTimerRes = min(max(tc.wPeriodMin, 1), tc.wPeriodMax);
-			timeEndPeriod(gwTimerRes);
+			DwmEnableMMCSS(FALSE);
 			if (emulator)emulator->kill();
 			if (input_device)input_device->close();
 			CMessageLoop* pLoop = _Module.GetMessageLoop();
@@ -329,8 +322,6 @@ public:
 						if(!OnIdle(nIdleCount++))
 							bDoIdle = FALSE;
 					}
-
-					gamewnd.DoFrame();
 				}
 
 
