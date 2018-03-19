@@ -31,20 +31,8 @@ typedef struct{
 	GLuint bpp;
 	HDC   hDC;
 	HGLRC hRC;
-	HWND gl_hwnd;
-	HWND window_hwnd;
+	HWND hwnd;
 	struct retro_hw_render_callback hw;
-
-
-	HWND D3D_hwnd;
-
-	IDirect3DDevice9Ex* D3D_device;
-	IDirect3DSurface9* D3D_backbuf;
-	IDirect3DSurface9* D3D_GLtarget;
-
-	HANDLE D3D_sharehandle;
-	HANDLE D3D_sharetexture;
-	HANDLE GL_htexture;
 
 }video;
 extern video g_video;
