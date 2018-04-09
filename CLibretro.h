@@ -54,7 +54,6 @@ public:
 	~CLibretro();
 	DWORD rate;
 	bool paused;
-	unsigned frame_count;
 	bool running();
 	bool loadfile(TCHAR* filename, TCHAR* core_filename, bool gamespecificoptions);
 	void splash();

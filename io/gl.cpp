@@ -5,6 +5,9 @@
 #include <math.h>
 video g_video;
 
+#include <dwmapi.h>
+#pragma comment (lib,"dwmapi.lib")
+
 static const PIXELFORMATDESCRIPTOR pfd =
 {
 	sizeof(PIXELFORMATDESCRIPTOR),
@@ -175,57 +178,34 @@ void init_framebuffer(int width, int height)
 	if (g_video.rbo_id)
 		glDeleteRenderbuffers(1, &g_video.rbo_id);
 
-
 	glGenFramebuffers(1, &g_video.fbo_id);
 	glBindFramebuffer(GL_FRAMEBUFFER, g_video.fbo_id);
-
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, g_video.tex_id, 0);
-
-	if (g_video.hw.depth && g_video.hw.stencil) {
-		glGenRenderbuffers(1, &g_video.rbo_id);
-		glBindRenderbuffer(GL_RENDERBUFFER, g_video.rbo_id);
-		glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, width, height);
-
-		glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, g_video.rbo_id);
-	}
-	else if (g_video.hw.depth) {
-		glGenRenderbuffers(1, &g_video.rbo_id);
-		glBindRenderbuffer(GL_RENDERBUFFER, g_video.rbo_id);
-		glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, width, height);
-
-		glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, g_video.rbo_id);
-	}
-
-	if (g_video.hw.depth || g_video.hw.stencil)
-		glBindRenderbuffer(GL_RENDERBUFFER, 0);
-
+	glGenRenderbuffers(1, &g_video.rbo_id);
+	glBindRenderbuffer(GL_RENDERBUFFER, g_video.rbo_id);
+	glRenderbufferStorage(GL_RENDERBUFFER, g_video.hw.stencil?GL_DEPTH24_STENCIL8: GL_DEPTH_COMPONENT24, width, height);
+	glFramebufferRenderbuffer(GL_FRAMEBUFFER, g_video.hw.stencil ? GL_DEPTH_STENCIL_ATTACHMENT: GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, g_video.rbo_id);
 	glBindRenderbuffer(GL_RENDERBUFFER, 0);
-
 	glCheckFramebufferStatus(GL_FRAMEBUFFER);
-
 	glClearColor(0, 0, 0, 1);
 	glClear(GL_COLOR_BUFFER_BIT);
-
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
 
 void resize_cb(int w, int h) {
-	int32_t vp_width = w;
-	int32_t vp_height = h;
-	float targetAspectRatio = g_video.aspect;
 	// figure out the largest area that fits in this resolution at the desired aspect ratio
-	int width = vp_width;
-	int height = (int)floor(width / targetAspectRatio);
-	if (height > vp_height)
+	int width = w;
+	int height = (unsigned)floor(width / g_video.aspect);
+	if (height > h)
 	{
 		//It doesn't fit our height, we must switch to pillarbox then
-		height = vp_height;
-		width = (int)floor(height * targetAspectRatio);
+		height = h;
+		width = (unsigned)floor(height * g_video.aspect);
 	}
 	// set up the new viewport centered in the backbuffer
-	int vp_x = ((vp_width - width)/ 2);
-	int vp_y = ((vp_height - height) / 2);
+	int vp_x = ((w - width)/ 2);
+	int vp_y = ((h - height) / 2);
 	glViewport(vp_x, vp_y, width, height);
 }
 
