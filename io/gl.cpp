@@ -181,11 +181,16 @@ void init_framebuffer(int width, int height)
 	glGenFramebuffers(1, &g_video.fbo_id);
 	glBindFramebuffer(GL_FRAMEBUFFER, g_video.fbo_id);
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, g_video.tex_id, 0);
-	glGenRenderbuffers(1, &g_video.rbo_id);
-	glBindRenderbuffer(GL_RENDERBUFFER, g_video.rbo_id);
-	glRenderbufferStorage(GL_RENDERBUFFER, g_video.hw.stencil?GL_DEPTH24_STENCIL8: GL_DEPTH_COMPONENT24, width, height);
-	glFramebufferRenderbuffer(GL_FRAMEBUFFER, g_video.hw.stencil ? GL_DEPTH_STENCIL_ATTACHMENT: GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, g_video.rbo_id);
+	if (g_video.hw.depth) {
+		glGenRenderbuffers(1, &g_video.rbo_id);
+		glBindRenderbuffer(GL_RENDERBUFFER, g_video.rbo_id);
+		glRenderbufferStorage(GL_RENDERBUFFER, g_video.hw.stencil ? GL_DEPTH24_STENCIL8 : GL_DEPTH_COMPONENT24, width, height);
+		glFramebufferRenderbuffer(GL_FRAMEBUFFER, g_video.hw.stencil ? GL_DEPTH_STENCIL_ATTACHMENT : GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, g_video.rbo_id);
+		glBindRenderbuffer(GL_RENDERBUFFER, 0);
+	}
 	glBindRenderbuffer(GL_RENDERBUFFER, 0);
+
+
 	glCheckFramebufferStatus(GL_FRAMEBUFFER);
 	glClearColor(0, 0, 0, 1);
 	glClear(GL_COLOR_BUFFER_BIT);
@@ -195,12 +200,18 @@ void init_framebuffer(int width, int height)
 
 void resize_cb(int w, int h) {
 	// figure out the largest area that fits in this resolution at the desired aspect ratio
-	int width = w;
+	if (g_video.last_w != w && w ||
+		g_video.last_h != h && h)
+	{
+			g_video.last_w = w;
+			g_video.last_h = h;
+	}
+	int width = g_video.last_w;
 	int height = (unsigned)floor(width / g_video.aspect);
-	if (height > h)
+	if (height > g_video.last_h)
 	{
 		//It doesn't fit our height, we must switch to pillarbox then
-		height = h;
+		height = g_video.last_h;
 		width = (unsigned)floor(height * g_video.aspect);
 	}
 	// set up the new viewport centered in the backbuffer
@@ -266,6 +277,8 @@ void create_window(int width, int height, HWND hwnd) {
 
 	if (g_video.hw.context_reset)g_video.hw.context_reset();
 	g_win = true;
+	g_video.last_w = 0;
+	g_video.last_h = 0;
 }
 
 

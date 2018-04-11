@@ -689,7 +689,6 @@ DWORD CLibretro::ThreadStart(void)
 
 
 	_audio.init(refreshr, av);
-	frame_count = 0;
 	paused = false;
 	
 	lastTime = milliseconds_now() / 1000;
