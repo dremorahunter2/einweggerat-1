@@ -188,7 +188,6 @@ void init_framebuffer(int width, int height)
 		glFramebufferRenderbuffer(GL_FRAMEBUFFER, g_video.hw.stencil ? GL_DEPTH_STENCIL_ATTACHMENT : GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, g_video.rbo_id);
 		glBindRenderbuffer(GL_RENDERBUFFER, 0);
 	}
-	glBindRenderbuffer(GL_RENDERBUFFER, 0);
 
 
 	glCheckFramebufferStatus(GL_FRAMEBUFFER);
@@ -228,7 +227,7 @@ void create_window(int width, int height, HWND hwnd) {
 	unsigned int	PixelFormat;
 	PixelFormat = ChoosePixelFormat(g_video.hDC, &pfd);
 	SetPixelFormat(g_video.hDC, PixelFormat, &pfd);
-	gladLoadGL();
+	//gladLoadGL();
 	if (g_video.hw.context_type == RETRO_HW_CONTEXT_OPENGL_CORE)
 	{
 		GLint attribs_core[] =

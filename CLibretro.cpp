@@ -383,7 +383,7 @@ bool CLibretro::savestate(TCHAR* filename, bool save)
 {
 	if (isEmulating)
 	{
-		paused = true;
+
 		size_t size = g_retro.retro_serialize_size();
 		if (size)
 		{
@@ -397,7 +397,7 @@ bool CLibretro::savestate(TCHAR* filename, bool save)
 				fwrite(Memory, 1, size, Input);
 				fclose(Input);
 				Input = NULL;
-				paused = false;
+			
 				return true;
 
 			}
@@ -412,7 +412,7 @@ bool CLibretro::savestate(TCHAR* filename, bool save)
 				g_retro.retro_unserialize(Memory, size);
 				if (Input) fclose(Input);
 				Input = NULL;
-				paused = false;
+			
 				return true;
 			}
 		}
@@ -610,6 +610,42 @@ static DWORD WINAPI libretro_thread(void* Param)
 
 DWORD CLibretro::ThreadStart(void)
 {
+	init_common();
+	// Do stuff
+	while (isEmulating)
+	{
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+		glClearColor(0, 0, 0, 1);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		if (!paused)g_retro.retro_run();
+		double currentTime = milliseconds_now() / 1000;
+		nbFrames++;
+		if (currentTime - lastTime >= 0.5) { // If last prinf() was more than 1 sec ago
+											 // printf and reset timer
+			TCHAR buffer[100] = { 0 };
+			int len = swprintf(buffer, 100, L"einweggerät: %2f ms/frame\n, %d FPS", 1000.0 / double(nbFrames), nbFrames);
+			SetWindowText(emulator_hwnd, buffer);
+			nbFrames = 0;
+			lastTime += 1.0;
+		}
+	}
+	_audio.destroy();
+	video_deinit();
+	g_retro.retro_unload_game();
+	g_retro.retro_deinit();
+	return 0;
+}
+
+
+
+CLibretro::~CLibretro(void)
+{
+	if (isEmulating)isEmulating = false;
+	kill();
+}
+
+bool CLibretro::init_common()
+{
 	variables.clear();
 	struct retro_system_info system = { 0 };
 	g_video = { 0 };
@@ -625,7 +661,6 @@ DWORD CLibretro::ThreadStart(void)
 		printf("FAILED TO LOAD CORE!!!!!!!!!!!!!!!!!!");
 		return false;
 	}
-
 	CHAR szFileName[MAX_PATH] = { 0 };
 	string ansi = utf8_from_utf16(rom_path);
 	strcpy(szFileName, ansi.c_str());
@@ -686,17 +721,44 @@ DWORD CLibretro::ThreadStart(void)
 	{
 		refreshr = lpDevMode.dmDisplayFrequency;
 	}
-
-
 	_audio.init(refreshr, av);
 	paused = false;
-	
 	lastTime = milliseconds_now() / 1000;
 	nbFrames = 0;
-	savesram(sav_filename);
 	isEmulating = true;
-	// Do stuff
-	while (isEmulating)
+}
+
+bool CLibretro::loadfile(TCHAR* filename, TCHAR* core_filename,bool gamespecificoptions,bool mthreaded)
+{
+	if (isEmulating)isEmulating = false;
+	gamespec = gamespecificoptions;
+	lstrcpy(rom_path, filename);
+	lstrcpy(core_path, core_filename);
+	threaded = mthreaded;
+	if (threaded)
+	{
+		thread_handle =CreateThread(NULL, 0, &libretro_thread, (void*)this, 0, &thread_id);
+		return true;
+	}
+	else
+	{
+		return init_common();
+	}
+}
+
+
+void CLibretro::splash()
+{
+	if (!isEmulating){
+		PAINTSTRUCT ps;
+		HDC pDC = BeginPaint(emulator_hwnd,&ps);
+		RECT rect;
+		GetClientRect(emulator_hwnd, &rect);
+		HBRUSH hBrush = (HBRUSH)::GetStockObject(BLACK_BRUSH);
+		::FillRect(pDC, &rect, hBrush);
+		EndPaint(emulator_hwnd, &ps);
+	}
+	else if(!threaded)
 	{
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 		glClearColor(0, 0, 0, 1);
@@ -712,45 +774,6 @@ DWORD CLibretro::ThreadStart(void)
 			nbFrames = 0;
 			lastTime += 1.0;
 		}
-	}
-
-	savesram(sav_filename, true);
-	_audio.destroy();
-	video_deinit();
-	g_retro.retro_unload_game();
-	g_retro.retro_deinit();
-}
-
-
-
-CLibretro::~CLibretro(void)
-{
-	if (isEmulating)isEmulating = false;
-	kill();
-}
-
-
-bool CLibretro::loadfile(TCHAR* filename, TCHAR* core_filename,bool gamespecificoptions)
-{
-	if (isEmulating)isEmulating = false;
-	gamespec = gamespecificoptions;
-	lstrcpy(rom_path, filename);
-	lstrcpy(core_path, core_filename);
-	thread_handle =CreateThread(NULL, 0, &libretro_thread, (void*)this, 0, &thread_id);
-	return true;
-}
-
-
-void CLibretro::splash()
-{
-	if (!isEmulating){
-		PAINTSTRUCT ps;
-		HDC pDC = BeginPaint(emulator_hwnd,&ps);
-		RECT rect;
-		GetClientRect(emulator_hwnd, &rect);
-		HBRUSH hBrush = (HBRUSH)::GetStockObject(BLACK_BRUSH);
-		::FillRect(pDC, &rect, hBrush);
-		EndPaint(emulator_hwnd, &ps);
 	}
 }
 
@@ -769,8 +792,17 @@ bool CLibretro::init(HWND hwnd)
 void CLibretro::kill()
 {
 	isEmulating = false;
-	WaitForSingleObject(thread_handle, INFINITE);
-	CloseHandle(thread_handle);
-	
+	if (threaded)
+	{
+		WaitForSingleObject(thread_handle, INFINITE);
+		CloseHandle(thread_handle);
+	}
+	else
+	{
+		_audio.destroy();
+		video_deinit();
+		g_retro.retro_unload_game();
+		g_retro.retro_deinit();
+	}
 }
 

@@ -171,16 +171,6 @@ public:
 			return CWindow::IsDialogMessage(pMsg);
 		}
 
-		BOOL IsRunning()
-		{
-			if (emulator)
-			{
-				emulator->splash();
-				return emulator->running();
-			}
-			return FALSE;
-		}
-
 		LRESULT OnSize(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& bHandled)
 		{
 			if (!emulator->isEmulating)
@@ -216,7 +206,7 @@ public:
 		}
 
 
-		void start(TCHAR* rom_filename,TCHAR* core_filename, bool specifics)
+		void start(TCHAR* rom_filename,TCHAR* core_filename, bool specifics, bool threads)
 		{
 			TCHAR core_filename2[MAX_PATH] = { 0 };
 			GetCurrentDirectory(MAX_PATH, core_filename2);
@@ -229,9 +219,15 @@ public:
 				DestroyWindow();
 				return;
 			}
-			if (!emulator->loadfile(rom_filename, core_filename, specifics))
+			if (!emulator->loadfile(rom_filename, core_filename, specifics,threads))
 				DestroyWindow();
 		}
+
+		void DoFrame()
+		{
+			if(emulator)emulator->splash();
+		}
+
 
 		void ProcessFile(LPCTSTR lpszPath)
 		{
@@ -313,26 +309,14 @@ public:
 
 		for(;;)
 		{
-
-			if ( gamewnd.IsRunning() ) {
-				while ( gamewnd.IsRunning() && !::PeekMessage(&m_msg, NULL, 0, 0, PM_NOREMOVE) )
-				{
-					while(bDoIdle && !::PeekMessage(&m_msg, NULL, 0, 0, PM_NOREMOVE))
-					{
-						if(!OnIdle(nIdleCount++))
-							bDoIdle = FALSE;
-					}
-				}
-
-
-			}
-			else
+			while (!::PeekMessage(&m_msg, NULL, 0, 0, PM_NOREMOVE))
 			{
-				while(bDoIdle && !::PeekMessage(&m_msg, NULL, 0, 0, PM_NOREMOVE))
+				while (bDoIdle && !::PeekMessage(&m_msg, NULL, 0, 0, PM_NOREMOVE))
 				{
-					if(!OnIdle(nIdleCount++))
+					if (!OnIdle(nIdleCount++))
 						bDoIdle = FALSE;
 				}
+				gamewnd.DoFrame();
 			}
 
 			bRet = ::GetMessage(&m_msg, NULL, 0, 0);

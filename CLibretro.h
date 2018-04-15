@@ -55,11 +55,12 @@ public:
 	DWORD rate;
 	bool paused;
 	bool running();
-	bool loadfile(TCHAR* filename, TCHAR* core_filename, bool gamespecificoptions);
+	bool loadfile(TCHAR* filename, TCHAR* core_filename, bool gamespecificoptions, bool mthreaded = false);
 	void splash();
 	void render();
 	void run();
 	void reset();
+	bool init_common();
 	bool core_load(TCHAR *sofile,bool specifics, TCHAR* filename, TCHAR* core_filename);
 	bool init(HWND hwnd);
 	bool savestate(TCHAR* filename, bool save = false);
@@ -71,6 +72,7 @@ public:
 	Audio  _audio;
 	double lastTime;
     int nbFrames;
+	bool threaded;
 };
 
 

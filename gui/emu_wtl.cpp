@@ -157,6 +157,7 @@ int Run(LPTSTR cmdline = NULL, int nCmdShow = SW_SHOWDEFAULT)
 			a.add<string>("core_name", 'c', "core filename", true, "");
 			a.add<string>("rom_name", 'r', "rom filename", true, "");
 			a.add("pergame", 'g', "per-game configuration");
+			a.add("threads", 't', "use multithreaded core execution");
 			a.parse_check(argc, cmdargptr);
 			printf("\nPress any key to continue....\n");
 			_Module.RemoveMessageLoop();
@@ -181,13 +182,15 @@ int Run(LPTSTR cmdline = NULL, int nCmdShow = SW_SHOWDEFAULT)
 	a.add<string>("core_name", 'c', "core filename", true, "");
 	a.add<string>("rom_name", 'r', "rom filename", true, "");
 	a.add("pergame", 'g', "per-game configuration");
+	a.add("threads", 't', "use multithreaded core execution");
 	a.parse_check(argc, cmdargptr);
 
 	wstring rom = s2ws(a.get<string>("rom_name"));
 	wstring core = s2ws(a.get<string>("core_name"));
 	bool percore = a.exist("pergame");
+	bool thread = a.exist("threads");
 	dlgMain.ShowWindow(nCmdShow);
-	dlgMain.start((TCHAR*)rom.c_str(), (TCHAR*)core.c_str(), percore);
+	dlgMain.start((TCHAR*)rom.c_str(), (TCHAR*)core.c_str(), percore,thread);
 	int nRet = theLoop.Run(dlgMain);
 	_Module.RemoveMessageLoop();
 	LocalFree(cmdargptr);

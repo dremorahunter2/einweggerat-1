@@ -145,7 +145,7 @@ mal_uint32 Audio::fill_buffer(uint8_t* out, mal_uint32 count) {
 	size_t amount = fifo_read_avail(_fifo);
 	amount = count > amount ? amount : count;
 	fifo_read(_fifo, out, amount);
-	scond_signal(condz);
+	//scond_signal(condz);
 	slock_unlock(lockz);
 	memset(out + amount, 0, count - amount);
 	return count;
