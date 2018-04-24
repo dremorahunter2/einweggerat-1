@@ -207,30 +207,28 @@ bool core_environment(unsigned cmd, void *data) {
 
 	case RETRO_ENVIRONMENT_SET_INPUT_DESCRIPTORS: // 31
 	{
-		
-		
 		char variable_val2[50] = { 0 };
 		Std_File_Reader_u out;
 		lstrcpy(input_device->path, retro->inputcfg_path);
 		if (!out.open(retro->inputcfg_path))
-		{
+		  {
 			const char *err = input_device->load(out);
 		    if (!err)
-		    {
-				struct retro_input_descriptor *var = (struct retro_input_descriptor *)data;
-				static int i = 0;
-				while (var != NULL && var->port == 0){
-				var++;i++;
-				}
+		      {
+				    struct retro_input_descriptor *var = (struct retro_input_descriptor *)data;
+				    static int i = 0;
+				    while (var != NULL && var->port == 0){
+				    var++;i++;
+				  }
 				if (i != input_device->bl->get_count())
 				{
-					out.close();
-					input_device->bl->clear();
-					goto init;
+					  out.close();
+					  input_device->bl->clear();
+					  goto init;
 				}
 
-		    }
-			out.close();
+		  }
+		  out.close();
 		}
 		else
 		{
@@ -244,7 +242,7 @@ bool core_environment(unsigned cmd, void *data) {
 				keyboard.key.type = dinput::di_event::key_none;
 				keyboard.key.which = NULL;
 				CString str = var->description;
-			    int id = var->id;
+			  int id = var->id;
 				int index = var->index;
 				if (var->device == RETRO_DEVICE_ANALOG || (var->device == RETRO_DEVICE_JOYPAD))
 				{
@@ -274,6 +272,7 @@ bool core_environment(unsigned cmd, void *data) {
 		return true;
 	}
 	break;
+
 	case RETRO_ENVIRONMENT_GET_VARIABLE:
 	{
 		struct retro_variable * variable = (struct retro_variable*)data;
@@ -281,11 +280,12 @@ bool core_environment(unsigned cmd, void *data) {
 		return true;
 	}
 	break;
+
 	case RETRO_ENVIRONMENT_GET_VARIABLE_UPDATE:
 	{
-	*(bool*)data = retro->variables_changed;
-	retro->variables_changed = false;
-	return true;
+	  *(bool*)data = retro->variables_changed;
+	  retro->variables_changed = false;
+	  return true;
 	}
 	break;
 		
@@ -326,7 +326,6 @@ static int16_t core_input_state(unsigned port, unsigned device, unsigned index, 
 	input *input_device = input::GetSingleton();
 	if (input_device && input_device->bl != NULL)
 	{
-
 		for (unsigned int i = 0; i < input_device->bl->get_count(); i++) {
 			{
 				if (device == RETRO_DEVICE_ANALOG || device == RETRO_DEVICE_JOYPAD)
@@ -338,7 +337,6 @@ static int16_t core_input_state(unsigned port, unsigned device, unsigned index, 
 					if (device == RETRO_DEVICE_ANALOG)
 					{
 						if (value <= -0x8000)value = -0x7fff;
-						if (value >= 0x8000)value = 0x7fff;
 						if (index == RETRO_DEVICE_INDEX_ANALOG_LEFT)
 						{
 							if ((id == RETRO_DEVICE_ID_ANALOG_X && retro_id == 16) || (id == RETRO_DEVICE_ID_ANALOG_Y && retro_id == 17))
@@ -366,7 +364,6 @@ static int16_t core_input_state(unsigned port, unsigned device, unsigned index, 
 	return 0;
 }
 
-
 void CLibretro::core_audio_sample(int16_t left, int16_t right)
 {
 	int16_t buf[2] = { left, right };
@@ -390,29 +387,33 @@ bool CLibretro::savestate(TCHAR* filename, bool save)
 			if (save)
 			{
 				FILE *Input = _wfopen(filename, L"wb");
-				if (!Input) return(NULL);
+				if (!Input)return false;
 				// Get the filesize
 				BYTE *Memory = (BYTE *)malloc(size);
 				g_retro.retro_serialize(Memory, size);
-				fwrite(Memory, 1, size, Input);
+				if(Memory)fwrite(Memory, 1, size, Input);
 				fclose(Input);
 				Input = NULL;
-			
 				return true;
 
 			}
 			else
 			{
 				FILE *Input = _wfopen(filename, L"rb");
+        if (!Input)return false;
 				fseek(Input, 0, SEEK_END);
 				int Size = ftell(Input);
 				fseek(Input, 0, SEEK_SET);
 				BYTE *Memory = (BYTE *)malloc(Size);
+        if (!Memory)
+        {
+          fclose(Input);
+          return false;
+        }
 				fread(Memory, 1, Size, Input);
 				g_retro.retro_unserialize(Memory, size);
-				if (Input) fclose(Input);
+				fclose(Input);
 				Input = NULL;
-			
 				return true;
 			}
 		}
@@ -436,7 +437,6 @@ bool CLibretro::savesram(TCHAR* filename, bool save)
 				fwrite(Memory, 1, size, Input);
 				fclose(Input);
 				Input = NULL;
-				paused = false;
 				return true;
 
 			}
@@ -447,13 +447,10 @@ bool CLibretro::savesram(TCHAR* filename, bool save)
 				fseek(Input, 0, SEEK_END);
 				int Size = ftell(Input);
 				fseek(Input, 0, SEEK_SET);
-				BYTE *Memory = (BYTE *)malloc(Size);
-				fread(Memory, 1, Size, Input);
-				BYTE *Memory_load = (BYTE *)g_retro.retro_get_memory_data(RETRO_MEMORY_SAVE_RAM);
-				memcpy(Memory_load, Memory, Size);
-				if (Input) fclose(Input);
+        BYTE *Memory_load = (BYTE *)g_retro.retro_get_memory_data(RETRO_MEMORY_SAVE_RAM);
+				fread(Memory_load, 1, Size, Input);
+				fclose(Input);
 				Input = NULL;
-				paused = false;
 				return true;
 			}
 		}
@@ -473,7 +470,6 @@ static void core_audio_sample(int16_t left, int16_t right) {
 	lib->core_audio_sample(left, right);
 }
 
-
 static size_t core_audio_sample_batch(const int16_t *data, size_t frames) {
 	CLibretro* lib = CLibretro::GetSingleton();
 	if (lib->isEmulating)
@@ -484,7 +480,7 @@ static size_t core_audio_sample_batch(const int16_t *data, size_t frames) {
 	else return 0;
 }
 
-bool CLibretro::core_load(TCHAR *sofile,bool gamespecificoptions, TCHAR* game_filename,TCHAR* core_filename) {
+bool CLibretro::core_load(TCHAR *sofile,bool gamespecificoptions, TCHAR* game_filename) {
 	
 	memset(&g_retro, 0, sizeof(g_retro));
 	g_retro.handle = LoadLibrary(sofile);
@@ -528,23 +524,22 @@ bool CLibretro::core_load(TCHAR *sofile,bool gamespecificoptions, TCHAR* game_fi
 	lstrcpy(filez, game_filename);
 	PathStripPath(filez);
 	PathRemoveExtension(filez);
-	TCHAR core_path[MAX_PATH] = { 0 };
-	GetModuleFileNameW(g_retro.handle, core_path, sizeof(core_path));
-	PathRemoveExtension(core_path);
+	TCHAR core_handlepath[MAX_PATH] = { 0 };
+	GetModuleFileNameW(g_retro.handle, core_handlepath, sizeof(core_handlepath));
+	PathRemoveExtension(core_handlepath);
 	GetCurrentDirectory(MAX_PATH, sys_filename);
 	PathAppend(sys_filename, L"system");
 	lstrcpy(sav_filename, sys_filename);
 	PathAppend(sav_filename, filez);
 	lstrcat(sav_filename, L".sav");
 
-	memset(inputcfg_path, 0, MAX_PATH);
-	memset(corevar_path, 0, MAX_PATH);
+  lstrcpy(inputcfg_path,L"");
+  lstrcpy(corevar_path,L"");
 	
 	if (gamespecificoptions)
 	{
-		
-		lstrcpy(inputcfg_path, core_path);
-		lstrcpy(corevar_path, core_path);
+		lstrcpy(inputcfg_path, core_handlepath);
+		lstrcpy(corevar_path, core_handlepath);
 		PathAppend(inputcfg_path, filez);
 		PathAppend(corevar_path, filez);
 		lstrcat(inputcfg_path, L"_input.cfg");
@@ -552,9 +547,8 @@ bool CLibretro::core_load(TCHAR *sofile,bool gamespecificoptions, TCHAR* game_fi
 	}
 	else
 	{
-		
-		lstrcat(inputcfg_path, core_path);
-		lstrcat(corevar_path, core_path);
+		lstrcat(inputcfg_path, core_handlepath);
+		lstrcat(corevar_path, core_handlepath);
 		lstrcat(inputcfg_path, L"_input.cfg");
 		lstrcat(corevar_path, L".ini");
 	}
@@ -572,8 +566,6 @@ bool CLibretro::core_load(TCHAR *sofile,bool gamespecificoptions, TCHAR* game_fi
 
 static void noop() { 
 }
-
-
 
 CLibretro* CLibretro::m_Instance = 0 ;
 CLibretro* CLibretro::CreateInstance(HWND hwnd )
@@ -617,8 +609,8 @@ DWORD CLibretro::ThreadStart(void)
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 		glClearColor(0, 0, 0, 1);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-		if (!paused)g_retro.retro_run();
-		double currentTime = milliseconds_now() / 1000;
+		g_retro.retro_run();
+		double currentTime = double(milliseconds_now() / 1000);
 		nbFrames++;
 		if (currentTime - lastTime >= 0.5) { // If last prinf() was more than 1 sec ago
 											 // printf and reset timer
@@ -632,11 +624,10 @@ DWORD CLibretro::ThreadStart(void)
 	_audio.destroy();
 	video_deinit();
 	g_retro.retro_unload_game();
+  if (info.data)free((void*)info.data);
 	g_retro.retro_deinit();
 	return 0;
 }
-
-
 
 CLibretro::~CLibretro(void)
 {
@@ -656,7 +647,7 @@ bool CLibretro::init_common()
 	g_video.hw.context_destroy = NULL;
 	variables_changed = false;
 
-	if (!core_load(core_path, gamespec, rom_path, core_path))
+	if (!core_load(core_path, gamespec, rom_path))
 	{
 		printf("FAILED TO LOAD CORE!!!!!!!!!!!!!!!!!!");
 		return false;
@@ -664,45 +655,36 @@ bool CLibretro::init_common()
 	CHAR szFileName[MAX_PATH] = { 0 };
 	string ansi = utf8_from_utf16(rom_path);
 	strcpy(szFileName, ansi.c_str());
-	struct retro_game_info info = { 0 };
 	struct stat st;
 	stat(szFileName, &st);
 	info.path = szFileName;
 	info.data = NULL;
 	info.size = st.st_size;
-	info.meta = NULL;
+	info.meta = "";
 
 	g_retro.retro_get_system_info(&system);
 	if (!system.need_fullpath) {
-		FILE *Input = _wfopen(rom_path, L"rb");
-		if (!Input)
+		FILE *inputfile = _wfopen(rom_path, L"rb");
+		if (!inputfile)
 		{
+      fail:
 			printf("FAILED TO LOAD ROMz!!!!!!!!!!!!!!!!!!");
 			return false;
 		}
-		// Get the filesize
-		fseek(Input, 0, SEEK_END);
-		int Size = ftell(Input);
-		fseek(Input, 0, SEEK_SET);
-		BYTE *Memory = (BYTE *)malloc(Size);
-		if (!Memory) return(NULL);
-		if (fread(Memory, 1, Size, Input) != (size_t)Size) return(NULL);
-		if (Input) fclose(Input);
-		Input = NULL;
-		info.data = malloc(info.size);
-		memcpy((BYTE*)info.data, Memory, info.size);
-		free(Memory);
+    info.data = malloc(info.size);
+    if (!info.data)goto fail;
+    fread((void*)info.data, 1, info.size, inputfile);
+	  fclose(inputfile);
+		inputfile = NULL;
 	}
 	if (!g_retro.retro_load_game(&info))
 	{
 		printf("FAILED TO LOAD ROM!!!!!!!!!!!!!!!!!!");
 		return false;
 	}
-	if (info.data)free((void*)info.data);
-
+	
 	retro_system_av_info av = { 0 };
 	g_retro.retro_get_system_av_info(&av);
-
 	::video_configure(&av.geometry, emulator_hwnd);
 
 	DEVMODE lpDevMode;
@@ -710,22 +692,15 @@ bool CLibretro::init_common()
 	lpDevMode.dmSize = sizeof(DEVMODE);
 	lpDevMode.dmDriverExtra = 0;
 	double refreshr = 0;
-	if (EnumDisplaySettings(NULL, ENUM_CURRENT_SETTINGS, &lpDevMode) == 0) {
-
-		DWM_TIMING_INFO timing_info = { 0 };
-		timing_info.cbSize = sizeof(timing_info);
-		DwmGetCompositionTimingInfo(NULL, &timing_info);
-		refreshr = (timing_info.qpcRefreshPeriod) / 1000;
-	}
-	else
-	{
-		refreshr = lpDevMode.dmDisplayFrequency;
-	}
+  DWM_TIMING_INFO timing_info = { 0 };
+	timing_info.cbSize = sizeof(timing_info);
+	DwmGetCompositionTimingInfo(NULL, &timing_info);
+	refreshr = double((timing_info.qpcRefreshPeriod) / 1000);
 	_audio.init(refreshr, av);
-	paused = false;
-	lastTime = milliseconds_now() / 1000;
+	lastTime = (double)milliseconds_now() / 1000;
 	nbFrames = 0;
 	isEmulating = true;
+  return true;
 }
 
 bool CLibretro::loadfile(TCHAR* filename, TCHAR* core_filename,bool gamespecificoptions,bool mthreaded)
@@ -742,10 +717,10 @@ bool CLibretro::loadfile(TCHAR* filename, TCHAR* core_filename,bool gamespecific
 	}
 	else
 	{
-		return init_common();
+		bool common = init_common();
+		return common;
 	}
 }
-
 
 void CLibretro::splash()
 {
@@ -763,8 +738,16 @@ void CLibretro::splash()
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 		glClearColor(0, 0, 0, 1);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-		if (!paused)g_retro.retro_run();
-		double currentTime = milliseconds_now() / 1000;
+		g_retro.retro_run();
+
+		static bool loadstate = true; 	
+		if (loadstate)
+		{
+			savestate(L"s.state");
+			loadstate=false;
+		}
+
+		double currentTime = (double)milliseconds_now() / 1000;
 		nbFrames++;
 		if (currentTime - lastTime >= 0.5) { // If last prinf() was more than 1 sec ago
 											 // printf and reset timer
@@ -778,10 +761,9 @@ void CLibretro::splash()
 }
 
 
-void CLibretro::run()
-{
-	
+void CLibretro::run(){
 }
+
 bool CLibretro::init(HWND hwnd)
 {
 	isEmulating = false;
@@ -803,6 +785,6 @@ void CLibretro::kill()
 		video_deinit();
 		g_retro.retro_unload_game();
 		g_retro.retro_deinit();
+    if (info.data)free((void*)info.data);
 	}
 }
-

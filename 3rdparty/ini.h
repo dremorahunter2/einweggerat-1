@@ -3,13 +3,12 @@
           Licensing information can be found at the end of the file.
 ------------------------------------------------------------------------------
 
-ini.h - v1.1 - Simple ini-file reader for C/C++.
+ini.h - v1.2 - Simple ini-file reader for C/C++.
 
 Do this:
     #define INI_IMPLEMENTATION
 before you include this file in *one* C/C++ file to create the implementation.
 */
-
 #ifndef ini_h
 #define ini_h
 
@@ -166,7 +165,7 @@ to substitute them for your own. Here's an example:
     #define INI_IMPLEMENTATION
     #define INI_MEMCPY( dst, src, cnt ) ( my_memcpy_func( dst, src, cnt ) )
     #define INI_STRLEN( s ) ( my_strlen_func( s ) )
-    #define INI_STRICMP( s1, s2 ) ( my_stricmp_func( s1, s2 ) )
+    #define INI_STRNICMP( s1, s2, cnt ) ( my_strnicmp_func( s1, s2, cnt ) )
     #include "ini.h"
 
 If no custom function is defined, ini.h will default to the C runtime library equivalent.
@@ -388,41 +387,35 @@ the length is determined automatically, but in this case `value` has to be zero-
 
 #define INITIAL_CAPACITY ( 256 )
 
+#undef _CRT_NONSTDC_NO_DEPRECATE 
 #define _CRT_NONSTDC_NO_DEPRECATE 
+#undef _CRT_SECURE_NO_WARNINGS
 #define _CRT_SECURE_NO_WARNINGS
 #include <stddef.h>
 
 #ifndef INI_MALLOC
-    #define _CRT_NONSTDC_NO_DEPRECATE 
-    #define _CRT_SECURE_NO_WARNINGS
     #include <stdlib.h>
     #define INI_MALLOC( ctx, size ) ( malloc( size ) )
     #define INI_FREE( ctx, ptr ) ( free( ptr ) )
 #endif
 
 #ifndef INI_MEMCPY
-    #define _CRT_NONSTDC_NO_DEPRECATE 
-    #define _CRT_SECURE_NO_WARNINGS
     #include <string.h>
     #define INI_MEMCPY( dst, src, cnt ) ( memcpy( dst, src, cnt ) )
 #endif 
 
 #ifndef INI_STRLEN
-    #define _CRT_NONSTDC_NO_DEPRECATE 
-    #define _CRT_SECURE_NO_WARNINGS
     #include <string.h>
     #define INI_STRLEN( s ) ( strlen( s ) )
 #endif 
 
-#ifndef INI_STRICMP
+#ifndef INI_STRNICMP
     #ifdef _WIN32
-        #define _CRT_NONSTDC_NO_DEPRECATE 
-        #define _CRT_SECURE_NO_WARNINGS
         #include <string.h>
-        #define INI_STRICMP( s1, s2 ) ( stricmp( s1, s2 ) )
+        #define INI_STRNICMP( s1, s2, cnt ) ( strnicmp( s1, s2, cnt ) )
     #else                           
         #include <string.h>         
-        #define INI_STRICMP( s1, s2 ) ( strcasecmp( s1, s2 ) )        
+        #define INI_STRNICMP( s1, s2, cnt ) ( strncasecmp( s1, s2, cnt ) )        
     #endif
 #endif 
 
@@ -740,7 +733,7 @@ int ini_find_section( ini_t const* ini, char const* name, int name_length )
             {
             char const* const other = 
                 ini->sections[ i ].name_large ? ini->sections[ i ].name_large : ini->sections[ i ].name;
-            if( (int) INI_STRLEN( other ) == name_length && INI_STRICMP( name, other ) == 0 )
+            if( INI_STRNICMP( name, other, name_length ) == 0 )
                 return i;
             }
         }
@@ -764,7 +757,7 @@ int ini_find_property( ini_t const* ini, int section, char const* name, int name
                 {
                 char const* const other = 
                     ini->properties[ i ].name_large ? ini->properties[ i ].name_large : ini->properties[ i ].name;
-                if( (int) INI_STRLEN( other ) == name_length && INI_STRICMP( name, other ) == 0 )
+                if( INI_STRNICMP( name, other, name_length ) == 0 )
                     return c;
                 ++c;
                 }
@@ -978,13 +971,13 @@ void ini_property_value_set( ini_t* ini, int section, int property, char const* 
             if( length + 1 >= sizeof( ini->properties[ 0 ].value ) )
                 {
                 ini->properties[ p ].value_large = (char*) INI_MALLOC( ini->memctx, (size_t) length + 1 );
-                INI_MEMCPY( ini->properties[ p ].name_large, value, (size_t) length );
+                INI_MEMCPY( ini->properties[ p ].value_large, value, (size_t) length );
                 ini->properties[ p ].value_large[ length ] = '\0';
                 }
             else
                 {
                 INI_MEMCPY( ini->properties[ p ].value, value, (size_t) length );
-                ini->properties[ p ].name[ length ] = '\0';
+                ini->properties[ p ].value[ length ] = '\0';
                 }
             }
         }
@@ -994,9 +987,16 @@ void ini_property_value_set( ini_t* ini, int section, int property, char const* 
 #endif /* INI_IMPLEMENTATION */
 
 /*
+
+contributors:
+    Randy Gaul (copy-paste bug in ini_property_value_set)
+    Branimir Karadzic (INI_STRNICMP bugfix)
+
 revision history:
+    1.2     using strnicmp for correct length compares, fixed copy-paste bug in ini_property_value_set
     1.1     customization, added documentation, cleanup
-    1.0     first publicly released version 
+    1.0     first publicly released version
+
 */
 
 /*

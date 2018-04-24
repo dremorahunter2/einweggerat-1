@@ -16,51 +16,51 @@ class Data_Writer;
 
 class input
 {
-	
 
-	// needed by SetCooperativeLevel inside enum callback
-	//HWND                    hWnd;
+
+  // needed by SetCooperativeLevel inside enum callback
+  //HWND                    hWnd;
 public:
-	int list_count;
-	TCHAR path[MAX_PATH];
-	input();
-	~input();
-	unsigned                bits;
-	LPDIRECTINPUT8          lpDI;
-	guid_container        * guids;
-	dinput                * di;
-	bind_list             * bl;
-	static	input* m_Instance;
-	static input* CreateInstance(HINSTANCE hInstance, HWND hWnd);
-	static	input* GetSingleton();
+  int list_count;
+  TCHAR path[MAX_PATH];
+  input();
+  ~input();
+  unsigned                bits;
+  LPDIRECTINPUT8          lpDI;
+  guid_container        * guids;
+  dinput                * di;
+  bind_list             * bl;
+  static	input* m_Instance;
+  static input* CreateInstance(HINSTANCE hInstance, HWND hWnd);
+  static	input* GetSingleton();
 
-	const char* open( HINSTANCE hInstance, HWND hWnd );
-	void close();
+  const char* open(HINSTANCE hInstance, HWND hWnd);
+  void close();
 
-	// configuration
-	const char* load( Data_Reader & );
+  // configuration
+  const char* load(Data_Reader &);
 
-	const char* save( Data_Writer & );
+  const char* save(Data_Writer &);
 
-	// input_i_dinput
-	void poll();
-	bool getbutton(int which, int16_t & value,int & retro_id, bool & isanalog);
+  // input_i_dinput
+  void poll();
+  bool getbutton(int which, int16_t & value, int & retro_id, bool & isanalog);
 
-	unsigned read();
+  unsigned read();
 
-	void strobe();
+  void strobe();
 
-	int get_speed();
+  int get_speed();
 
-	void set_speed( int );
+  void set_speed(int);
 
-	void set_paused( bool );
+  void set_paused(bool);
 
-	void clear_binds();
+  void clear_binds();
 
-	void set_focus( bool is_focused );
+  void set_focus(bool is_focused);
 
-	void refocus( void * hwnd );
+  void refocus(void * hwnd);
 };
 
 #endif
