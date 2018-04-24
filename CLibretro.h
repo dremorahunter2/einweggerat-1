@@ -24,9 +24,7 @@ namespace std
 class CLibretro
 {
 private:
-
   static	CLibretro* m_Instance;
-
 public:
   struct core_vars
   {
