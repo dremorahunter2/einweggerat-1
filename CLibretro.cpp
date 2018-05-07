@@ -664,7 +664,7 @@ bool CLibretro::init_common()
     }
     info.data = malloc(info.size);
     if (!info.data)goto fail;
-    fread((void*)info.data, 1, info.size, inputfile);
+    size_t read = fread((void*)info.data, 1, info.size, inputfile);
     fclose(inputfile);
     inputfile = NULL;
   }
@@ -732,7 +732,7 @@ void CLibretro::splash()
     static bool loadstate = true;
     if (loadstate)
     {
-      savestate(L"s.state");
+     // savestate(L"s.state");
       loadstate = false;
     }
 
@@ -770,11 +770,12 @@ void CLibretro::kill()
   }
   else
   {
-    _audio.destroy();
-    video_deinit();
+  
     g_retro.retro_unload_game();
     g_retro.retro_deinit();
     if (info.data)
       free((void*)info.data);
+    _audio.destroy();
+    video_deinit();
   }
 }
