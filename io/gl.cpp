@@ -369,7 +369,7 @@ void video_configure(const struct retro_game_geometry *geom, HWND hwnd) {
   glBindTexture(GL_TEXTURE_2D, 0);
 
   init_framebuffer(geom->base_width, geom->base_height);
-  if (g_video.hw.context_reset)g_video.hw.context_reset();
+  
 
   g_video.tex_w = geom->max_width;
   g_video.tex_h = geom->max_height;
@@ -379,7 +379,7 @@ void video_configure(const struct retro_game_geometry *geom, HWND hwnd) {
 
   refresh_vertex_data();
 
-  
+  if (g_video.hw.context_reset)g_video.hw.context_reset();
 }
 
 

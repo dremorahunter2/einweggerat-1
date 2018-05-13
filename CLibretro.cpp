@@ -5,6 +5,7 @@
 #include "io/gl_render.h"
 #include "gui/utf8conv.h"
 #define INI_IMPLEMENTATION
+#define INI_STRNICMP( s1, s2, cnt ) (strcmp( s1, s2) )
 #include "ini.h"
 #include <algorithm>
 using namespace std;
@@ -139,7 +140,10 @@ void init_coresettings(retro_variable *var)
       pch += strlen("; ");
       int vars = 0;
       strcpy(vars_struct.usevars, pch);
-      int second_index = ini_find_property(ini, INI_GLOBAL_SECTION, (char*)var->key, strlen(var->key));
+      char key[256] = { 0 };
+      strcpy(key, var->key);
+      int keylen = strlen(key);
+      int second_index = ini_find_property(ini, INI_GLOBAL_SECTION,key,keylen);
       const char* variable_val = ini_property_value(ini, INI_GLOBAL_SECTION, second_index);
       strcpy(vars_struct.var, variable_val);
       retro->variables.push_back(vars_struct);
