@@ -54,12 +54,11 @@ int Audio::get_clientrate()
    IPropertyStore* store = nullptr;
    PWAVEFORMATEX deviceFormatProperties;
    PROPVARIANT prop;
-   // get the device enumerator
-   hr = CoCreateInstance(__uuidof(MMDeviceEnumerator), NULL, CLSCTX_ALL, __uuidof(IMMDeviceEnumerator), (LPVOID *)&pEnumerator);
+   CoCreateInstance(__uuidof(MMDeviceEnumerator), NULL, CLSCTX_ALL, __uuidof(IMMDeviceEnumerator), (LPVOID *)&pEnumerator);
    // get default audio endpoint
-   hr = pEnumerator->GetDefaultAudioEndpoint(eRender, eMultimedia, &pDevice);
-   hr = pDevice->OpenPropertyStore(STGM_READ, &store);
-   hr = store->GetValue(PKEY_AudioEngine_DeviceFormat, &prop);
+   pEnumerator->GetDefaultAudioEndpoint(eRender, eMultimedia, &pDevice);
+   pDevice->OpenPropertyStore(STGM_READ, &store);
+   store->GetValue(PKEY_AudioEngine_DeviceFormat, &prop);
    deviceFormatProperties = (PWAVEFORMATEX)prop.blob.pBlobData;
    return deviceFormatProperties->nSamplesPerSec;
 }
@@ -70,6 +69,8 @@ bool Audio::init(double refreshra, retro_system_av_info av)
   lockz = slock_new();
   system_rate = av.timing.sample_rate;
   system_fps = av.timing.fps;
+  if (fabs(1.0f - system_fps / refreshra) <= 0.05)
+     system_rate *= (refreshra / system_fps);
   client_rate = get_clientrate();
   resamp_original = (client_rate / system_rate);
   resample = resampler_sinc_init(resamp_original);

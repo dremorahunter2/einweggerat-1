@@ -686,7 +686,7 @@ bool CLibretro::init_common()
   DWM_TIMING_INFO timing_info = { 0 };
   timing_info.cbSize = sizeof(timing_info);
   DwmGetCompositionTimingInfo(NULL, &timing_info);
-  refreshr = double((timing_info.qpcRefreshPeriod) / 1000);
+  refreshr = timing_info.rateRefresh.uiNumerator;
   _audio.init(refreshr, av);
   lastTime = (double)milliseconds_now() / 1000;
   nbFrames = 0;
