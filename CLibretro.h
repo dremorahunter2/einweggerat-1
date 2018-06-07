@@ -71,6 +71,8 @@ public:
   double lastTime;
   int nbFrames;
   bool threaded;
+
+  FILE * logfile;
 };
 
 

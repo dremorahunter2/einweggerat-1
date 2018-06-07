@@ -32,6 +32,7 @@ extern "C" {
     void destroy();
     void reset();
     void sleeplil();
+    int get_clientrate();
     void mix(const int16_t* samples, size_t sample_count);
     mal_uint32 fill_buffer(uint8_t* pSamples, mal_uint32 samplecount);
     mal_context context;

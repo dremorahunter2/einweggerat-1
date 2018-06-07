@@ -2,6 +2,8 @@
 #define MAL_NO_WASAPI
 #define MAL_NO_WINMM
 #include "audio.h"
+#include <initguid.h>
+#include <Mmdeviceapi.h>
 using namespace std;
 
 #define FRAME_COUNT (1024)
@@ -44,13 +46,31 @@ long long microseconds_now() {
   }
 }
 
+int Audio::get_clientrate()
+{
+   HRESULT hr;
+   IMMDevice * pDevice = NULL;
+   IMMDeviceEnumerator * pEnumerator = NULL;
+   IPropertyStore* store = nullptr;
+   PWAVEFORMATEX deviceFormatProperties;
+   PROPVARIANT prop;
+   // get the device enumerator
+   hr = CoCreateInstance(__uuidof(MMDeviceEnumerator), NULL, CLSCTX_ALL, __uuidof(IMMDeviceEnumerator), (LPVOID *)&pEnumerator);
+   // get default audio endpoint
+   hr = pEnumerator->GetDefaultAudioEndpoint(eRender, eMultimedia, &pDevice);
+   hr = pDevice->OpenPropertyStore(STGM_READ, &store);
+   hr = store->GetValue(PKEY_AudioEngine_DeviceFormat, &prop);
+   deviceFormatProperties = (PWAVEFORMATEX)prop.blob.pBlobData;
+   return deviceFormatProperties->nSamplesPerSec;
+}
+
 bool Audio::init(double refreshra, retro_system_av_info av)
 {
   condz = scond_new();
   lockz = slock_new();
   system_rate = av.timing.sample_rate;
   system_fps = av.timing.fps;
-  client_rate = 44100;
+  client_rate = get_clientrate();
   resamp_original = (client_rate / system_rate);
   resample = resampler_sinc_init(resamp_original);
   if (mal_context_init(NULL, 0, NULL, &context) != MAL_SUCCESS) {

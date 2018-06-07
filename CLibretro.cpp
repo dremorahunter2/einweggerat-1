@@ -8,6 +8,7 @@
 #define INI_STRNICMP( s1, s2, cnt ) (strcmp( s1, s2) )
 #include "ini.h"
 #include <algorithm>
+#include <numeric>  
 using namespace std;
 using namespace utf8util;
 #include <sys/stat.h>
@@ -468,7 +469,7 @@ static size_t core_audio_sample_batch(const int16_t *data, size_t frames) {
   if (lib->isEmulating)
   {
     lib->core_audio_sample_batch(data, frames);
-    return frames;
+   return frames;
   }
   else return 0;
 }
@@ -700,6 +701,7 @@ bool CLibretro::loadfile(TCHAR* filename, TCHAR* core_filename, bool gamespecifi
   lstrcpy(rom_path, filename);
   lstrcpy(core_path, core_filename);
   threaded = mthreaded;
+//  logfile = fopen("file.txt", "w");
   if (threaded)
   {
     thread_handle = CreateThread(NULL, 0, &libretro_thread, (void*)this, 0, &thread_id);
@@ -725,28 +727,56 @@ void CLibretro::splash()
   }
   else if (!threaded)
   {
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
-    glClearColor(0, 0, 0, 1);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    g_retro.retro_run();
+     glBindFramebuffer(GL_FRAMEBUFFER, 0);
+     glClearColor(0, 0, 0, 1);
+     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+     g_retro.retro_run();
 
-    static bool loadstate = true;
-    if (loadstate)
-    {
+
+     static vector<float> val;
+     static int nbfra = 0;
+     static double mean = 0;
+     
+     double currentTime = (double)milliseconds_now() / 1000;
+     nbFrames++;
+     nbfra++;
+
+     //  static bool loadstate = true;
+     // if (loadstate)
+     // {
+
      // savestate(L"s.state");
-      loadstate = false;
-    }
+ // }
 
-    double currentTime = (double)milliseconds_now() / 1000;
-    nbFrames++;
     if (currentTime - lastTime >= 0.5) { // If last prinf() was more than 1 sec ago
                        // printf and reset timer
-      TCHAR buffer[100] = { 0 };
-      int len = swprintf(buffer, 100, L"einweggerät: %2f ms/frame\n, %d FPS", 1000.0 / double(nbFrames), nbFrames);
+      TCHAR buffer[200] = { 0 };
+      int len = 0;
+      if (1)
+      {
+         static int maxfps = nbFrames;
+         static int minfps = nbFrames;
+   
+
+         val.push_back(nbFrames);
+         for (int i = 0; i < val.size(); i++)
+         {
+            maxfps = max(maxfps, val[i]);
+            minfps = min(minfps, val[i]);
+         }
+         mean = accumulate(val.begin(), val.end(), 0.0) / val.size();
+         len = swprintf(buffer, 200, L"einweggerät: %.2f ms/current frame\n, (%d min/%d max/%.2f mean/%d current) VPS %d frames executed", 1000.0 / double(nbFrames),minfps,maxfps,mean, nbFrames,nbfra);
+     //    fprintf(logfile, "einweggerät:(%d min/%d max/%.2f mean) VPS\n", minfps, maxfps, mean,nbfra);
+      }
+      else len = swprintf(buffer, 200, L"einweggerät: %2f ms/frame\n, min %d VPS", 1000.0 / double(nbFrames), nbFrames);
+         
+         
+         //len = swprintf(buffer, 100, L"einweggerät: %2f ms/frame\n, %d VPS", 1000.0 / double(nbFrames), nbFrames);
       SetWindowText(emulator_hwnd, buffer);
       nbFrames = 0;
       lastTime += 1.0;
     }
+
   }
 }
 
@@ -777,6 +807,7 @@ void CLibretro::kill()
     if (info.data)
       free((void*)info.data);
     _audio.destroy();
+  //  fclose(logfile);
     video_deinit();
   }
 }
