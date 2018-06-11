@@ -69,6 +69,16 @@ bool Audio::init(double refreshra, retro_system_av_info av)
   lockz = slock_new();
   system_rate = av.timing.sample_rate;
   system_fps = av.timing.fps;
+
+
+  if (refreshra > 119.0 && refreshra < 121.0)
+  refreshra /= 2.0;
+  if (refreshra > 179.0 && refreshra < 181.0)
+  refreshra /= 3.0;
+  if (refreshra > 239.0 && refreshra < 241.0)
+  refreshra /= 4.0;
+
+
   if (fabs(1.0f - system_fps / refreshra) <= 0.05)
      system_rate *= (refreshra / system_fps);
   client_rate = get_clientrate();
